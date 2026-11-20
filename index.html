@@ -1,0 +1,1813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>Drone Setup Guide</title>
+<!-- Fonts are optional: the guide works fully offline and falls back to system fonts. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0e13; --panel:#11171e; --panel2:#171f28; --line:#232e3b; --line2:#2f3d4e;
+  --text:#e6edf3; --muted:#8a97a7; --accent:#ffb020; --accent-ink:#1a1200;
+  --ok:#3fb950; --warn:#e3a008; --danger:#ff5b5b; --info:#58a6ff; --video:#c084fc;
+  --radius:10px; --shadow:0 8px 30px rgba(0,0,0,.35);
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+[data-theme=light]{
+  --bg:#f3f5f8; --panel:#ffffff; --panel2:#eef2f6; --line:#d8dfe7; --line2:#c4cfdb;
+  --text:#15202b; --muted:#5a6878; --accent:#c26d00; --accent-ink:#fff;
+  --ok:#1f8a3a; --warn:#a86b00; --danger:#d12f2f; --info:#1f6fd1; --video:#8b3fd9;
+  --shadow:0 8px 30px rgba(20,30,40,.12);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--text);font:16px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--info)}
+button{font:inherit;color:inherit}
+code,kbd{font-family:var(--mono);font-size:.88em;background:var(--panel2);border:1px solid var(--line);padding:.05em .4em;border-radius:5px}
+pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px;overflow:auto}
+pre code{background:none;border:0;padding:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------- top bar ---------- */
+.top{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:12px;height:60px;padding:0 16px;background:color-mix(in srgb,var(--panel) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand .logo{width:34px;height:34px;flex:none;color:var(--accent)}
+.brand .t{font-weight:700;letter-spacing:.2px;white-space:nowrap;line-height:1.1}
+.brand .s{font:12px var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+.prog{display:flex;align-items:center;gap:8px;flex:1;min-width:90px;max-width:260px}
+.prog .bar{flex:1;height:8px;background:var(--panel2);border:1px solid var(--line);border-radius:99px;overflow:hidden}
+.prog .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),#ffd166);transition:width .4s}
+.prog span{font:12px var(--mono);color:var(--muted);white-space:nowrap}
+.search{position:relative;flex:1;max-width:280px}
+.search input{width:100%;height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font:inherit;font-size:14px}
+.qres{position:absolute;top:42px;left:0;right:0;background:var(--panel);border:1px solid var(--line2);border-radius:10px;box-shadow:var(--shadow);overflow:hidden;z-index:40}
+.qres button{display:block;width:100%;text-align:left;border:0;background:none;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--line)}
+.qres button:hover,.qres button:focus{background:var(--panel2)}
+.qres small{display:block;color:var(--muted);font-size:12px}
+.spacer{flex:1}
+.pill{display:flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:99px;border:1px solid var(--line2);background:var(--panel2);cursor:pointer;font-size:14px;white-space:nowrap}
+.pill .dot{width:9px;height:9px;border-radius:50%;background:var(--muted)}
+.pill.on .dot{background:var(--ok);box-shadow:0 0 0 4px color-mix(in srgb,var(--ok) 25%,transparent)}
+.pill.demo .dot{background:var(--video)}
+.seg{display:flex;border:1px solid var(--line2);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--panel2);padding:6px 10px;font-size:13px;cursor:pointer;color:var(--muted)}
+.seg button.on{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.icon-btn{width:36px;height:36px;border-radius:8px;border:1px solid var(--line2);background:var(--panel2);cursor:pointer;font-size:17px;flex:none}
+.menu{position:absolute;right:12px;top:56px;background:var(--panel);border:1px solid var(--line2);border-radius:10px;box-shadow:var(--shadow);padding:6px;min-width:260px;z-index:50}
+.menu button,.menu a{display:block;width:100%;text-align:left;padding:9px 12px;border:0;background:none;border-radius:6px;cursor:pointer;color:var(--text);text-decoration:none;font-size:14px}
+.menu button:hover,.menu a:hover{background:var(--panel2)}
+.menu .mobile-only{display:none}
+.only-mobile{display:none}
+.ribbon{background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--warn) 18%,var(--panel)),color-mix(in srgb,var(--warn) 18%,var(--panel)) 12px,var(--panel) 12px,var(--panel) 24px);border-bottom:1px solid var(--line);padding:6px 16px;font-size:13px;text-align:center}
+.editbar{background:color-mix(in srgb,var(--info) 14%,var(--panel));border-bottom:1px solid var(--line);padding:10px 16px;font-size:13px}
+.editbar ul{margin:6px 0 0;padding-left:18px;color:var(--danger)}
+
+/* ---------- layout ---------- */
+.layout{display:grid;grid-template-columns:310px minmax(0,1fr);min-height:calc(100vh - 60px)}
+.side{border-right:1px solid var(--line);background:var(--panel);padding:14px 10px 40px;position:sticky;top:60px;height:calc(100vh - 60px);overflow:auto}
+.phase{margin-bottom:6px}
+.phase-h{display:flex;align-items:center;gap:8px;width:100%;border:0;background:none;padding:8px 8px;cursor:pointer;border-radius:8px;text-align:left}
+.phase-h:hover{background:var(--panel2)}
+.phase-h .ic{width:26px;height:26px;display:grid;place-items:center;border-radius:7px;background:var(--panel2);border:1px solid var(--line);font-size:14px;flex:none}
+.phase-h .nm{flex:1;font-weight:600;font-size:14px}
+.phase-h .ct{font:11px var(--mono);color:var(--muted)}
+.phase.complete .phase-h .ic{background:color-mix(in srgb,var(--ok) 22%,var(--panel2));border-color:var(--ok)}
+.steps-l{list-style:none;margin:2px 0 8px;padding:0 0 0 20px;border-left:1px dashed var(--line2);margin-left:20px}
+.steps-l button{display:flex;gap:8px;align-items:flex-start;width:100%;border:0;background:none;text-align:left;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:13.5px;color:var(--muted);line-height:1.35}
+.steps-l button:hover{background:var(--panel2);color:var(--text)}
+.steps-l button.cur{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--text);font-weight:600}
+.steps-l .st{width:16px;flex:none;font-family:var(--mono);text-align:center}
+.st.done{color:var(--ok)} .st.skipped{color:var(--warn)}
+.main{padding:28px clamp(16px,4vw,56px) 80px;max-width:980px;width:100%;min-width:0;outline:none}
+
+/* ---------- step ---------- */
+.crumbs{font:12px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+h1{font-size:clamp(26px,3.4vw,36px);line-height:1.15;margin:6px 0 10px;letter-spacing:-.3px}
+h3{margin:18px 0 6px;font-size:17px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.meta span{font:12px var(--mono);color:var(--muted);border:1px solid var(--line);border-radius:99px;padding:2px 10px}
+.meta .lvl.easy{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 50%,var(--line))}
+.meta .lvl.medium{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 50%,var(--line))}
+.meta .lvl.hard{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 50%,var(--line))}
+.meta .eid{color:var(--info);border-color:var(--info)}
+.phase-intro{display:flex;gap:14px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin:12px 0 8px}
+.phase-intro .pi{font-size:26px;line-height:1}
+.phase-intro p{margin:0}
+.verify{background:color-mix(in srgb,var(--info) 12%,var(--panel));border:1px dashed var(--info);border-radius:8px;padding:8px 12px;font-size:14px;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;margin:16px 0}
+.content p{margin:0 0 12px}
+.content ul,.content ol{margin:0 0 12px;padding-left:22px}
+.content li{margin:3px 0}
+.content .note{font-size:14px;color:var(--muted);border-left:3px solid var(--line2);padding-left:10px}
+.content table{border-collapse:collapse;width:100%;margin:6px 0 14px;font-size:14px}
+.content th,.content td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+.content th{background:var(--panel2);font-weight:600}
+.alert{display:flex;gap:12px;border-radius:var(--radius);padding:12px 14px;margin:10px 0;border:1px solid;font-size:15px}
+.alert .ai{font-size:18px;line-height:1.3}
+.alert p{margin:0}
+.alert.danger{background:color-mix(in srgb,var(--danger) 12%,var(--panel));border-color:color-mix(in srgb,var(--danger) 55%,var(--line))}
+.alert.caution{background:color-mix(in srgb,var(--warn) 12%,var(--panel));border-color:color-mix(in srgb,var(--warn) 55%,var(--line))}
+.alert.tip{background:color-mix(in srgb,var(--ok) 10%,var(--panel));border-color:color-mix(in srgb,var(--ok) 45%,var(--line))}
+.alert.info{background:color-mix(in srgb,var(--info) 10%,var(--panel));border-color:color-mix(in srgb,var(--info) 45%,var(--line))}
+.alert b.lv{font:600 11px var(--mono);letter-spacing:.8px;text-transform:uppercase;display:block;margin-bottom:2px}
+.media{display:grid;gap:12px;margin:16px 0;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.media figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.media img,.media video{display:block;width:100%;height:auto;cursor:zoom-in;background:#000}
+.media iframe{display:block;width:100%;aspect-ratio:16/9;border:0}
+.media figcaption{font-size:13px;color:var(--muted);padding:8px 12px}
+.ph{aspect-ratio:16/10;display:grid;place-items:center;text-align:center;padding:16px;color:var(--muted);font-size:13px;background:repeating-linear-gradient(-45deg,var(--panel),var(--panel) 10px,var(--panel2) 10px,var(--panel2) 20px)}
+.ph b{display:block;font-size:26px;margin-bottom:6px;opacity:.7}
+details.more{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);margin:16px 0}
+details.more>summary{cursor:pointer;padding:12px 16px;font-weight:600;list-style:none;display:flex;align-items:center;gap:10px}
+details.more>summary::-webkit-details-marker{display:none}
+details.more>summary::before{content:'＋';font-family:var(--mono);color:var(--accent);width:16px}
+details.more[open]>summary::before{content:'−'}
+details.more>.content{padding:0 18px 8px}
+.sec-h{font:600 12px var(--mono);letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin:26px 0 8px}
+.checks{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.chk{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);cursor:pointer;transition:border-color .15s,background .15s}
+.chk:hover{border-color:var(--line2)}
+.chk input{position:absolute;opacity:0;pointer-events:none}
+.chk .box{width:22px;height:22px;flex:none;border-radius:6px;border:2px solid var(--line2);display:grid;place-items:center;margin-top:1px;transition:.15s}
+.chk.on{border-color:color-mix(in srgb,var(--ok) 55%,var(--line));background:color-mix(in srgb,var(--ok) 7%,var(--panel))}
+.chk.on .box{background:var(--ok);border-color:var(--ok)}
+.chk.on .box::after{content:'';width:6px;height:11px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.chk input:focus-visible+.box{outline:2px solid var(--accent);outline-offset:2px}
+.chk .txt{flex:1}
+.badge{font:600 10px var(--mono);letter-spacing:.6px;border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:2px}
+.badge.live{background:color-mix(in srgb,var(--ok) 20%,transparent);color:var(--ok);border:1px solid var(--ok)}
+.trouble details{border:1px solid var(--line);border-radius:8px;background:var(--panel);margin:6px 0}
+.trouble summary{cursor:pointer;padding:10px 14px;font-weight:500}
+.trouble .content{padding:0 16px 6px}
+.links{display:flex;flex-wrap:wrap;gap:8px}
+.links a{font-size:14px;border:1px solid var(--line2);border-radius:99px;padding:4px 12px;text-decoration:none;background:var(--panel)}
+textarea.note-in{width:100%;min-height:70px;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--text);font:14px var(--sans);resize:vertical}
+.foot{position:sticky;bottom:0;display:flex;gap:10px;align-items:center;margin-top:28px;padding:12px 0;background:var(--bg);border-top:1px solid var(--line);box-shadow:0 -10px 20px -12px rgba(0,0,0,.25)}
+.grow{flex:1}
+.btn{border:1px solid var(--line2);background:var(--panel2);border-radius:10px;padding:11px 18px;cursor:pointer;font-weight:600;font-size:15px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:disabled{background:var(--panel2);color:var(--muted);border-color:var(--line2);opacity:1}
+.btn.link{background:none;border:0;color:var(--muted);font-weight:500;text-decoration:underline}
+.btn.small{padding:6px 12px;font-size:13px;border-radius:8px}
+.term{border:0;background:none;padding:0;color:inherit;border-bottom:1.5px dotted var(--accent);cursor:help;font:inherit}
+.pop{position:absolute;z-index:60;max-width:320px;background:var(--panel);border:1px solid var(--line2);border-radius:10px;box-shadow:var(--shadow);padding:12px 14px;font-size:14px}
+.pop b{display:block;margin-bottom:4px;color:var(--accent)}
+.gate{border:2px solid var(--danger);border-radius:14px;padding:20px 22px;background:color-mix(in srgb,var(--danger) 8%,var(--panel));margin:16px 0}
+.gate h2{margin:0 0 8px;font-size:20px}
+.gate .chk{margin:14px 0}
+
+/* ---------- modal / lightbox ---------- */
+.modal{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:16px}
+.modal .box{background:var(--bg);border:1px solid var(--line2);border-radius:14px;box-shadow:var(--shadow);width:min(860px,100%);max-height:92vh;overflow:auto;padding:20px 22px}
+.modal .box h2{margin:0 0 4px}
+.modal img{max-width:100%;max-height:88vh;border-radius:10px}
+.modal .x{float:right}
+
+/* ---------- live widgets ---------- */
+.lw{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);margin:16px 0;overflow:hidden}
+.lw-h{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--panel2);font:600 12px var(--mono);letter-spacing:.6px;text-transform:uppercase}
+.lw-h .d{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.lw.fresh .lw-h .d{background:var(--ok)}
+.lw.demo .lw-h .d{background:var(--video)}
+.lw-h .src{margin-left:auto;color:var(--muted);font-weight:400}
+.lw-b{padding:14px}
+.lw-wait{color:var(--muted);font-size:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kv div{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.kv small{display:block;font:11px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.kv b{font:600 17px var(--mono)}
+.good{color:var(--ok)} .bad{color:var(--danger)} .meh{color:var(--warn)}
+.chbars{display:grid;gap:6px}
+.chbar{display:grid;grid-template-columns:70px 1fr 54px;gap:10px;align-items:center;font:12px var(--mono)}
+.chbar .tr{height:12px;background:var(--panel2);border:1px solid var(--line);border-radius:99px;position:relative;overflow:hidden}
+.chbar .tr i{position:absolute;top:0;bottom:0;left:0;background:var(--info);border-radius:99px}
+.chbar .tr::after{content:'';position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--line2)}
+.msgs{font:12.5px var(--mono);max-height:180px;overflow:auto;display:grid;gap:3px}
+.msgs .sev0,.msgs .sev1,.msgs .sev2,.msgs .sev3{color:var(--danger)} .msgs .sev4{color:var(--warn)}
+.live-modal .row{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
+
+/* ---------- diagrams ---------- */
+.dg{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);margin:16px 0;padding:14px}
+.dg svg{display:block;width:100%;height:auto;max-height:440px}
+.dg-title{font:600 12px var(--mono);letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.dg-info{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);font-size:14px;min-height:44px}
+.dg-tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.dg .legend{display:flex;gap:14px;flex-wrap:wrap;font:12px var(--mono);color:var(--muted);margin-top:8px}
+.dg .legend i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:5px;border-radius:2px}
+svg .arm{stroke:var(--line2);stroke-width:10;stroke-linecap:round}
+svg .body{fill:var(--panel2);stroke:var(--line2);stroke-width:2}
+svg .motor{cursor:pointer}
+svg .propdisc{fill:color-mix(in srgb,var(--info) 8%,transparent);stroke:var(--line2);stroke-width:1.5;stroke-dasharray:4 4;transition:.2s}
+svg .propdisc.CW{fill:color-mix(in srgb,var(--accent) 9%,transparent)}
+svg .motor.hl .propdisc,svg .motor:hover .propdisc,svg .motor:focus .propdisc{stroke:var(--accent);stroke-width:3;stroke-dasharray:none;fill:color-mix(in srgb,var(--accent) 22%,transparent)}
+svg .hub{fill:var(--panel);stroke:var(--text);stroke-width:2}
+svg .num{fill:var(--text);font:700 15px var(--mono);text-anchor:middle;dominant-baseline:central}
+svg .rot{fill:none;stroke-width:3;stroke-linecap:round}
+svg .rot.CW,svg .head.CW{stroke:var(--accent);fill:none} svg .head.CW{fill:var(--accent)}
+svg .rot.CCW,svg .head.CCW{stroke:var(--info);fill:none} svg .head.CCW{fill:var(--info)}
+svg .dirlbl{font:600 11px var(--mono);text-anchor:middle;fill:var(--muted)}
+svg .front{fill:var(--accent);font:700 12px var(--mono);text-anchor:middle;letter-spacing:2px}
+.spin{animation:spin 2.2s linear infinite}
+.spin.CCW{animation-direction:reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+svg .comp rect{fill:var(--panel2);stroke:var(--line2);stroke-width:1.5;rx:8}
+svg .comp text{fill:var(--text);font:600 12px var(--sans);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+svg .comp{cursor:pointer}
+svg .comp.hl rect{stroke:var(--accent);stroke-width:3}
+svg .comp.fc rect{fill:color-mix(in srgb,var(--accent) 12%,var(--panel2));stroke:var(--accent)}
+svg .wire{stroke-width:3;fill:none;opacity:.55;transition:.2s}
+svg .wire.power{stroke:var(--danger)} svg .wire.signal{stroke:var(--info)} svg .wire.video{stroke:var(--video)} svg .wire.data{stroke:var(--ok)}
+svg .wire.hl{opacity:1;stroke-width:5}
+svg .wire.dim{opacity:.12}
+svg .wlbl{font:11px var(--mono);fill:var(--muted);text-anchor:middle;paint-order:stroke;stroke:var(--panel);stroke-width:4}
+svg .wlbl.hl{fill:var(--text)}
+.vtx{overflow:auto}
+.vtx table{border-collapse:separate;border-spacing:4px;font:13px var(--mono);margin:0 auto}
+.vtx th{color:var(--muted);font-weight:600;padding:4px 6px}
+.vtx td button{width:100%;min-width:56px;padding:8px 4px;border-radius:7px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;font:13px var(--mono)}
+.vtx td button:hover{border-color:var(--accent)}
+.vtx td button.rec{border-color:var(--ok)}
+.vtx td button.sel{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+.vtx td button.same{outline:2px dashed var(--warn);outline-offset:-3px}
+.vtx-read{display:flex;gap:16px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:12px}
+.vtx-read .big{font:700 30px var(--mono);color:var(--accent)}
+.parts{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.part{background:var(--panel2);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:13.5px}
+.part .ph,.part img{aspect-ratio:4/3;width:100%;object-fit:cover;display:grid}
+.part .pt{padding:8px 10px}
+.part .q{font:600 12px var(--mono);color:var(--accent)}
+.part small{color:var(--muted);display:block;line-height:1.35;margin-top:2px}
+.sticks{display:flex;gap:24px;justify-content:center;flex-wrap:wrap}
+.gimbal{text-align:center;font:12px var(--mono);color:var(--muted)}
+.gimbal svg{width:170px;height:170px}
+svg .gbox{fill:var(--panel2);stroke:var(--line2);stroke-width:2}
+svg .gx{stroke:var(--line2);stroke-dasharray:3 4}
+svg .gdot{fill:var(--accent);stroke:var(--bg);stroke-width:3;transition:cx .08s linear,cy .08s linear}
+svg .glbl{fill:var(--muted);font:10.5px var(--mono);text-anchor:middle}
+.horizon{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.horizon svg{width:180px;height:180px;flex:none}
+.done-hero{text-align:center;padding:30px 10px}
+.done-hero .big{font-size:64px}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:16px 0}
+.fields label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+.fields input{height:40px;padding:0 12px;border-radius:8px;border:1px solid var(--line2);background:var(--panel);color:var(--text);font:15px var(--sans)}
+#report{display:none}
+
+/* ---------- responsive ---------- */
+@media (max-width:1100px){ .search{display:none} .menu .mobile-only{display:block} }
+@media (max-width:860px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .prog{position:absolute;left:0;right:0;bottom:-1px;max-width:none;min-width:0}
+  .prog .bar{height:3px;border:0;border-radius:0}
+  .brand .t{font-size:15px}
+  .side{position:fixed;top:60px;left:0;bottom:0;width:min(330px,88vw);z-index:25;transform:translateX(-102%);transition:transform .25s;box-shadow:var(--shadow);height:auto}
+  body.nav-open .side{transform:none}
+  .only-mobile{display:block}
+  .seg,.prog span{display:none}
+  .brand .s{display:none}
+  .pill .lbl{display:none}
+  .pill{padding:0 11px}
+  .main{padding-top:20px}
+  .foot .btn{padding:10px 12px;font-size:14px;white-space:nowrap}
+  .foot{gap:6px}
+}
+
+/* ---------- print report ---------- */
+@media print{
+  @page{margin:14mm}
+  body{background:#fff;color:#000;font-size:11pt}
+  #app,.modal,.pop{display:none!important}
+  #report{display:block;padding:0 3px}
+  #report h1{font-size:20pt;margin:0 0 4px}
+  #report .sub{color:#444;margin-bottom:14px}
+  #report table{width:100%;border-collapse:collapse;margin:10px 0 16px;font-size:9.5pt;table-layout:fixed}
+  #report td{overflow-wrap:anywhere}
+  #report .w-n{width:6%} #report .w-p{width:17%} #report .w-s{width:31%} #report .w-st{width:11%} #report .w-c{width:15%}
+  #report th,#report td{border:1px solid #999;padding:4px 6px;text-align:left;vertical-align:top}
+  #report th{background:#eee}
+  #report tr{page-break-inside:avoid}
+  #report .cert{border:3px double #000;padding:18px;text-align:center;margin:10px 0 18px}
+  #report .cert h2{margin:0 0 6px;font-size:18pt}
+  #report .sign{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:30px}
+  #report .sign div{border-top:1px solid #000;padding-top:4px;font-size:9pt}
+}
+</style>
+</head>
+<body>
+<div id="app" aria-live="polite"></div>
+<div id="report"></div>
+
+<!--
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  CONTENT — EDIT THIS BLOCK ONLY.                                             ║
+║  Everything the reader sees comes from the GUIDE object below.               ║
+║  The engine (second <script>) never needs to change to add/replace content.  ║
+║  Full field reference: see AI_EDITING_GUIDE.md in the repository, or the     ║
+║  quick reference right here:                                                 ║
+║                                                                              ║
+║  phase  = { id, title, icon, summary, steps:[...] }                          ║
+║  step   = {                                                                  ║
+║    id        unique, lowercase-with-dashes (used in links: index.html#id)    ║
+║    title     short, starts with a verb ("Mount the motors")                  ║
+║    time      "10 min"       level  "easy" | "medium" | "hard"                ║
+║    warnings  [{ level:"danger"|"caution"|"tip"|"info", text }]               ║
+║    media     [{ type:"image"|"video", src:"", alt, caption }]                ║
+║              (empty src shows a labelled placeholder box)                    ║
+║    body      RICH TEXT (see below) – the simple instructions                 ║
+║    details   RICH TEXT – shown under "More detail" (auto-open in Detailed)   ║
+║    diagram   { type:"quadX"|"wiring"|"vtx"|"sticks"|"parts", ...options }    ║
+║    live      ["link","heartbeat","rc","sticks","attitude","gps","battery",   ║
+║               "messages"]  – live data panels when a drone is connected      ║
+║    checks    ["text", { text, auto:"px4"|"rc"|"gps3d"|"battery"|"attitude"   ║
+║               |"link"|"disarmed" }]  – must all be ticked to continue        ║
+║    checklistFrom "parts"  – adds one checkbox per item in GUIDE.parts        ║
+║    gate      { title, text, confirm }  – safety acknowledgement first        ║
+║    troubleshoot [{ q, a }]   links [{ label, url }]                          ║
+║    verify    "note for editors" – only visible in editor mode (?edit)        ║
+║  }                                                                           ║
+║  RICH TEXT = a string, or an array of:                                       ║
+║    "paragraph"  |  ["bullet","bullet"]  |  {ol:["step 1","step 2"]}          ║
+║    {h:"Sub-heading"}  |  {note:"small print"}  |  {code:"literal text"}      ║
+║    {table:[["Header","Header"],["cell","cell"]]}                             ║
+║  Inline: **bold**  *italic*  `code`  [link](https://…)  [[glossary term]]    ║
+║          {{drone}} {{support}} {{vtx}} (reader's chosen video channel)       ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+-->
+<script>
+const GUIDE = {
+
+  meta: {
+    id: "px4-quad-setup",            // change for a new guide (keeps saved progress separate)
+    title: "Drone Setup Guide",
+    drone: "[Your drone / kit name]",
+    organization: "[Your team or company]",
+    support: "[support email, phone or link]",
+    version: "0.1.0",
+    updated: "2026-11-19",
+    placeholder: true                // shows the "template content" ribbon. Set false when real materials are in.
+  },
+
+  settings: {
+    requireChecks: true,             // Next is locked until every box on a step is ticked
+    allowSkip: true,                 // show "Skip for now" (skipped steps are flagged in the report)
+    stickMode: 2,                    // 1 or 2 — which stick does throttle (Mode 2 = left)
+    rcMap: { roll: 1, pitch: 2, throttle: 3, yaw: 4 },  // RC channel order (AETR)
+    cells: 4                         // LiPo cell count, used for per-cell voltage readouts
+  },
+
+  // ───────────────────────── PARTS LIST ─────────────────────────
+  // image: "" shows a placeholder. Use a relative path ("img/motor.jpg") or a URL.
+  parts: [
+    { id: "frame",   name: "Frame kit (arms, plates, standoffs)", qty: 1, image: "", note: "Includes frame screws." },
+    { id: "motors",  name: "Brushless motors",            qty: 4, image: "", note: "Check the KV rating matches your battery." },
+    { id: "esc",     name: "4-in-1 ESC (or 4 single ESCs)", qty: 1, image: "", note: "Drives the motors." },
+    { id: "pm",      name: "Power module",                qty: 1, image: "", note: "Measures battery voltage and current for PX4." },
+    { id: "fc",      name: "PX4 flight controller",       qty: 1, image: "", note: "Pixhawk-style board." },
+    { id: "gps",     name: "GPS + compass module",        qty: 1, image: "", note: "With mast or mount." },
+    { id: "rx",      name: "ExpressLRS receiver",         qty: 1, image: "", note: "With antenna." },
+    { id: "tx",      name: "ExpressLRS radio transmitter", qty: 1, image: "", note: "The handheld controller." },
+    { id: "cam",     name: "Analog FPV camera",           qty: 1, image: "", note: "" },
+    { id: "vtx",     name: "Analog video transmitter (VTX) + antenna", qty: 1, image: "", note: "5.8 GHz." },
+    { id: "goggles", name: "Analog FPV goggles + antenna", qty: 1, image: "", note: "Must be 5.8 GHz analog." },
+    { id: "props",   name: "Propellers (2 CW + 2 CCW, plus spares)", qty: 8, image: "", note: "" },
+    { id: "lipo",    name: "LiPo flight batteries",       qty: 2, image: "", note: "Match the cell count in settings." },
+    { id: "charger", name: "LiPo balance charger",        qty: 1, image: "", note: "" },
+    { id: "strap",   name: "Battery strap + grip pad",    qty: 1, image: "", note: "" },
+    { id: "usb",     name: "USB data cable",              qty: 1, image: "", note: "Must carry data, not just charge." },
+    { id: "hw",      name: "Hardware bag (screws, zip ties, heat-shrink, foam tape)", qty: 1, image: "", note: "" }
+  ],
+
+  // ───────────────────────── GLOSSARY ─────────────────────────
+  // Write [[term]] in any text to make a tap-to-explain word. Use [[key|shown text]] for a different label.
+  glossary: {
+    "PX4": "Open-source flight software that runs on the flight controller and keeps the drone stable.",
+    "QGroundControl": "Free desktop/mobile app used to install PX4, calibrate sensors and change settings. Often shortened to QGC.",
+    "QGC": "Short for QGroundControl, the setup app.",
+    "flight controller": "The drone's brain: a small circuit board with sensors and a processor running PX4.",
+    "FC": "Flight controller: the drone's brain.",
+    "ESC": "Electronic Speed Controller. Turns battery power into the 3-phase power that spins each motor.",
+    "power module": "Sits between the battery and the drone. Powers the flight controller and tells it battery voltage/current.",
+    "ELRS": "ExpressLRS: an open-source radio control link between your handheld radio and the drone.",
+    "CRSF": "Crossfire serial protocol. The digital language an ELRS receiver uses to send stick positions to the flight controller.",
+    "bind phrase": "A secret word you type into both the radio and the receiver so they only talk to each other.",
+    "receiver": "The small radio on the drone that picks up commands from your handheld transmitter.",
+    "transmitter": "The handheld radio controller with the sticks.",
+    "UART": "A serial port on the flight controller. TX on one device connects to RX on the other.",
+    "VTX": "Video transmitter. Sends the camera picture to your goggles over 5.8 GHz.",
+    "FPV": "First-Person View: flying while watching live video from the drone's camera.",
+    "band": "A group of 8 video channels (A, B, E, F, R). The VTX and goggles must use the same band and channel.",
+    "mW": "Milliwatts: how strong the video signal is. Use low power (25 mW) on the bench.",
+    "LiPo": "Lithium-polymer battery. Very powerful; can catch fire if punctured, over-charged or over-discharged.",
+    "XT60": "The common yellow plug used for flight batteries.",
+    "arming": "Switching the motors on. Once armed, the props can spin at any moment.",
+    "failsafe": "What the drone does automatically when something goes wrong, e.g. losing radio signal.",
+    "airframe": "The type of vehicle (quad X, hexa, plane…) you tell PX4 you are flying.",
+    "actuator": "Anything PX4 controls: motors, servos. Configured on the Actuators screen.",
+    "CW": "Clockwise rotation, as seen from above.",
+    "CCW": "Counter-clockwise rotation, as seen from above.",
+    "DShot": "A digital protocol between the flight controller and the ESCs. Allows reversing motor direction in software.",
+    "compass": "Magnetometer. Tells the drone which way it is pointing. Sensitive to nearby metal and power wires.",
+    "RSSI": "Received Signal Strength Indicator: how good the radio link is.",
+    "Remote ID": "A digital licence plate that broadcasts the drone's identity and location, required in many countries.",
+    "smoke stopper": "A fuse-like device used on first power-up that limits current, so a wiring short doesn't burn parts."
+  },
+
+  // ───────────────────────── PHASES & STEPS ─────────────────────────
+  phases: [
+
+    /* ============ 1. BEFORE YOU START ============ */
+    {
+      id: "start", title: "Before you start", icon: "🧭",
+      summary: "Get set up: how this guide works, safety, parts and software.",
+      steps: [
+        {
+          id: "welcome", title: "Welcome — how this guide works", time: "2 min", level: "easy",
+          body: [
+            "This guide takes you from a box of parts to a drone that's ready to fly. Do one step at a time.",
+            [
+              "**Tick every box** on a step to unlock the next one.",
+              "Tap any word with a dotted underline, like [[ESC]], to see what it means.",
+              "Switch between **Simple** and **Detailed** at the top. Detailed opens the extra notes on every step.",
+              "Your progress **saves automatically** in this browser. Close the tab and come back any time.",
+              "Stuck? Every step has a **Stuck?** section with common fixes."
+            ],
+            "Using Chrome or Edge on a computer? You can **connect the drone over USB** and this guide will check some steps for you. Look for the green **LIVE** badges."
+          ],
+          details: [
+            "Need help from a person? Contact: {{support}}.",
+            {note: "This guide is a single file. It works offline, and nothing you enter leaves your computer."}
+          ],
+          checks: ["I know my progress saves in this browser, on this device"]
+        },
+        {
+          id: "safety", title: "Read the safety rules", time: "3 min", level: "easy",
+          gate: {
+            title: "Safety first",
+            text: [
+              "Drone motors spin at more than 20,000 RPM. A spinning prop can cause serious cuts, and LiPo batteries can catch fire.",
+              "Read these rules before you continue."
+            ],
+            confirm: "I understand that props and batteries can cause injury and fire"
+          },
+          warnings: [
+            { level: "danger", text: "**Props stay OFF** until the last phase of this guide. Never work on a drone with props on and a battery connected." },
+            { level: "danger", text: "**Never charge LiPo batteries unattended.** Charge them on a fire-safe surface or in a LiPo bag." }
+          ],
+          body: [
+            [
+              "Unplug the battery whenever you are not actively testing.",
+              "Never power the video transmitter without its antenna attached. It can burn itself out.",
+              "Throw away (properly recycle) any battery that is puffy, dented or damaged.",
+              "Work in a clear, well-lit space, and keep kids and pets away.",
+              "Fly only where it's legal and safe. Covered in the last phase."
+            ]
+          ],
+          details: [
+            {h: "LiPo basics"},
+            [
+              "Charge only with a balance charger set to the correct cell count and chemistry (LiPo).",
+              "Land when the battery reaches about 3.5 V per cell. Going lower damages it.",
+              "Store batteries at about 3.8 V per cell (most chargers have a *Storage* mode)."
+            ]
+          ],
+          checks: [
+            "Props will stay off until I'm told to put them on",
+            "I have a fire-safe place to charge batteries",
+            "I will unplug the battery whenever I'm not testing"
+          ]
+        },
+        {
+          id: "parts", title: "Check your parts", time: "10 min", level: "easy",
+          body: "Lay everything out on a clear table. Tick each item as you find it.",
+          diagram: { type: "parts" },
+          checklistFrom: "parts",
+          troubleshoot: [
+            { q: "Something is missing", a: "Stop here and contact {{support}} before you build. Missing small hardware is often in a bag taped inside the frame box." }
+          ]
+        },
+        {
+          id: "tools", title: "Gather tools and install software", time: "15 min", level: "easy",
+          body: [
+            {h: "Tools"},
+            [
+              "Hex drivers (usually 1.5, 2.0 and 2.5 mm)",
+              "Soldering iron and solder, if your kit needs soldering",
+              "Multimeter (for checking for short circuits)",
+              "Side cutters, zip ties, double-sided foam tape",
+              "Optional but recommended: a [[smoke stopper]]"
+            ],
+            {h: "Software"},
+            "Install **[[QGroundControl]]** on your computer now (Windows, macOS or Linux). You'll use it in Phase 3.",
+            "Start charging your flight batteries with the balance charger."
+          ],
+          links: [
+            { label: "Download QGroundControl", url: "https://docs.qgroundcontrol.com/master/en/qgc-user-guide/getting_started/download_and_install.html" },
+            { label: "PX4 documentation", url: "https://docs.px4.io/main/en/" }
+          ],
+          verify: "Confirm the QGC download link and the exact hex sizes for this kit.",
+          checks: [
+            "I have the tools listed above",
+            "QGroundControl is installed",
+            "Batteries are charging (balance mode, correct cell count)"
+          ]
+        }
+      ]
+    },
+
+    /* ============ 2. BUILD ============ */
+    {
+      id: "build", title: "Build the drone", icon: "🔧",
+      summary: "Put the frame together, mount the motors and electronics, and wire it up.",
+      steps: [
+        {
+          id: "frame", title: "Assemble the frame", time: "20 min", level: "easy",
+          media: [{ type: "image", src: "", caption: "Frame fully assembled, top view" }],
+          body: {ol: [
+            "Find the bottom plate and the four arms.",
+            "Attach the arms to the bottom plate with the supplied screws. Don't fully tighten them yet.",
+            "Fit the standoffs.",
+            "Check every arm sits flat and square, then tighten all screws."
+          ]},
+          details: "Use a small drop of medium (blue) threadlocker on metal-into-metal screws. Never use it on plastic, which it can crack.",
+          checks: ["All four arms are attached and tight", "The frame sits flat on the table without rocking"]
+        },
+        {
+          id: "motors", title: "Mount the motors", time: "15 min", level: "medium",
+          warnings: [
+            { level: "caution", text: "**Screws that are too long can touch the motor windings** and short the motor. Check that the screw doesn't touch the copper inside before you tighten it." }
+          ],
+          body: [
+            "Mount one motor at the end of each arm, with the wires pointing toward the centre of the frame.",
+            "Motor positions are numbered. This is how [[PX4]] numbers them on a quad in an X layout. You'll use these numbers later:"
+          ],
+          diagram: { type: "quadX", mode: "motors" },
+          details: "Don't worry about which way each motor spins yet. You'll check and fix direction in software in Phase 7.",
+          checks: ["All four motors are mounted with wires toward the centre", "No screw touches the motor windings", "Each motor spins freely by hand"]
+        },
+        {
+          id: "power", title: "Install the ESC and power wiring", time: "30 min", level: "hard",
+          warnings: [
+            { level: "danger", text: "**Polarity matters.** Red is +, black is −. Reversed battery wires will instantly destroy electronics." },
+            { level: "caution", text: "Do **not** connect a battery yet." }
+          ],
+          media: [{ type: "image", src: "", caption: "ESC mounted, motor wires soldered" }],
+          body: {ol: [
+            "Mount the [[ESC]] in the centre stack on rubber grommets.",
+            "Connect each motor's three wires to the ESC pads for that motor position. Swapping any two motor wires reverses the motor, so the order doesn't matter yet.",
+            "Connect the [[power module]] between the battery lead ([[XT60]]) and the ESC power input.",
+            "Insulate every joint with heat-shrink."
+          ]},
+          diagram: { type: "wiring", focus: ["bat", "pm", "esc", "motors"] },
+          details: [
+            "Solder at a hot iron temperature (about 350–400 °C) so joints flow quickly and shiny. A dull, grainy joint is a *cold joint* and may fail in flight.",
+            {note: "If your ESC supports [[DShot]], you can reverse motor direction in software later instead of re-soldering."}
+          ],
+          verify: "Replace with the kit's exact ESC pad layout and power-module type (analog vs. digital/I2C/CAN).",
+          checks: ["Motor wires are soldered and insulated", "Power module is wired between the battery plug and the ESC", "Red goes to + and black goes to −, double-checked"]
+        },
+        {
+          id: "fc", title: "Mount the flight controller", time: "15 min", level: "medium",
+          body: {ol: [
+            "Find the **arrow** printed on the [[flight controller]]. It must point to the **front** of the drone.",
+            "Mount it on soft mounts or vibration-damping foam, as close to the centre as possible.",
+            "Plug the ESC signal cable into the FC's motor outputs (often labelled MAIN or FMU OUT 1–4).",
+            "Plug the power module cable into the **POWER** port."
+          ]},
+          diagram: { type: "wiring", focus: ["fc", "esc", "pm"] },
+          details: "If the board has to be mounted rotated (for example to reach the USB port), that's fine. You'll tell PX4 the rotation during sensor setup in Phase 4.",
+          verify: "Confirm the output port name (MAIN vs. FMU vs. AUX) for this flight controller.",
+          checks: ["Arrow on the FC points forward (or I've noted its rotation)", "ESC signal cable is plugged into the motor outputs", "Power module is plugged into POWER"]
+        },
+        {
+          id: "gps", title: "Mount the GPS and compass", time: "10 min", level: "easy",
+          body: [
+            "Mount the GPS on its mast, **arrow pointing forward**, and plug it into the **GPS** port.",
+            "Keep it as far as possible from power wires, the ESC and the video transmitter. They interfere with the [[compass]]."
+          ],
+          diagram: { type: "wiring", focus: ["gps", "fc"] },
+          checks: ["GPS arrow points forward", "GPS is plugged into the GPS port", "GPS is away from power wires and the VTX"]
+        },
+        {
+          id: "rx-install", title: "Install the radio receiver", time: "15 min", level: "medium",
+          body: [
+            "Connect the [[ELRS]] [[receiver]] to a spare serial port ([[UART]]) on the flight controller:",
+            {table: [
+              ["Receiver pin", "Connects to FC"],
+              ["TX", "RX of the chosen port"],
+              ["RX", "TX of the chosen port"],
+              ["5V", "5V"],
+              ["GND", "GND"]
+            ]},
+            "**TX goes to RX and RX goes to TX.** Crossing the wires is the most common mistake.",
+            "Route the antenna away from carbon fibre and motor wires, ideally pointing down or out the back."
+          ],
+          diagram: { type: "wiring", focus: ["rx", "fc"] },
+          details: "Write down which port you used (for example TELEM2). You need it in Phase 5 when you tell PX4 where the receiver is.",
+          verify: "Name the exact FC port this kit uses for the receiver, and check that the receiver's voltage is 5 V.",
+          checks: ["Receiver TX goes to FC RX and RX goes to TX", "I wrote down the port name", "Antenna is mounted away from carbon fibre and wires"]
+        },
+        {
+          id: "fpv-install", title: "Install the camera and video transmitter", time: "20 min", level: "medium",
+          warnings: [
+            { level: "danger", text: "**Screw the antenna onto the VTX now, before it ever gets power.** Powering a VTX without an antenna can destroy it within seconds." }
+          ],
+          body: {ol: [
+            "Mount the camera at the front, tilted slightly up (about 10–20°).",
+            "Connect the camera video wire to the [[VTX]] video input.",
+            "Power the VTX from the pad or voltage its label specifies. Some VTXs need 5 V and some can take battery voltage.",
+            "Mount the VTX antenna pointing up or back, clear of props."
+          ]},
+          diagram: { type: "wiring", focus: ["cam", "vtx", "esc"] },
+          verify: "Confirm the VTX input voltage range and power source for this kit.",
+          checks: ["VTX antenna is attached", "Camera video goes into VTX video in", "VTX is powered from the correct voltage"]
+        },
+        {
+          id: "wiring-check", title: "Check for shorts and power up for the first time", time: "10 min", level: "medium",
+          warnings: [
+            { level: "danger", text: "Props must be **off**. Check now." }
+          ],
+          body: [
+            "Here's the full system. Tap any part to see how it connects:",
+            {ol: [
+              "Set your multimeter to continuity (beep) mode.",
+              "Touch the probes to the + and − pins of the battery plug. **It must NOT beep continuously.** A steady beep means a short circuit, so stop and find it.",
+              "Plug in the battery (through a [[smoke stopper]] if you have one).",
+              "You should see lights on the flight controller and hear the motors/ESC beep. Then unplug the battery."
+            ]}
+          ],
+          diagram: { type: "wiring" },
+          troubleshoot: [
+            { q: "Multimeter beeps between + and −", a: "There's a short. Look for solder bridges on the ESC and power module, stray wire strands, or a screw pinching a wire. Don't plug in a battery until it's fixed." },
+            { q: "Nothing lights up", a: "Check the power module cable is in the POWER port, and that the battery is charged." },
+            { q: "Smoke or a burning smell", a: "Unplug immediately. Inspect for reversed polarity or a short. Contact {{support}}." }
+          ],
+          checks: ["No short between battery + and −", "First power-up: lights on, no smoke", "Battery unplugged again"]
+        }
+      ]
+    },
+
+    /* ============ 3. QGROUNDCONTROL ============ */
+    {
+      id: "qgc", title: "QGroundControl & firmware", icon: "💻",
+      summary: "Connect the drone to your computer, install PX4 and choose the airframe.",
+      steps: [
+        {
+          id: "qgc-firmware", title: "Install PX4 firmware", time: "10 min", level: "easy",
+          warnings: [
+            { level: "caution", text: "Use **USB only**, with no battery connected. Plug straight into the computer, not through a hub." }
+          ],
+          body: {ol: [
+            "Open [[QGroundControl]] **first**, with the drone unplugged.",
+            "Click the **Q** icon (top left) → **Vehicle Setup** → **Firmware**.",
+            "Now plug in the USB cable.",
+            "Choose **PX4 Pro**, stable release, and click **OK**.",
+            "Wait for it to finish. The board will restart and QGC will connect."
+          ]},
+          media: [{ type: "image", src: "", caption: "Screenshot: QGC Firmware screen" }],
+          troubleshoot: [
+            { q: "QGC doesn't detect the board", a: ["Try a different USB cable (many are charge-only) and a different USB port.", "Linux: your user may need to be in the `dialout` group, and *ModemManager* may need to be removed. See the QGC install docs."] },
+            { q: "Upgrade fails halfway", a: "Unplug, close and reopen QGC, then try again. The bootloader stays safe, so you can always retry." }
+          ],
+          verify: "Pin the PX4 version this kit is tested with (e.g. v1.15 / v1.16) and say if a custom build is required (e.g. for CRSF).",
+          checks: ["Firmware upgrade completed without errors"]
+        },
+        {
+          id: "qgc-connect", title: "Confirm the connection", time: "3 min", level: "easy",
+          body: [
+            "After the restart QGC should show the vehicle connected in the top bar.",
+            "**Optional live check:** close QGroundControl (only one app can use the USB port at once), then press **Connect drone** below. Requires Chrome or Edge on a computer."
+          ],
+          live: ["link", "heartbeat"],
+          details: "The live check listens for the drone's *heartbeat*: a message PX4 sends every second over USB. It reads data only and never changes settings.",
+          troubleshoot: [
+            { q: "Connect drone says 'port busy' or fails to open", a: "Close QGroundControl, or any other app using the port, then try again." },
+            { q: "The button isn't there or doesn't work", a: "Live checks need Chrome or Edge on a desktop computer. You can still tick the box manually after you've seen the vehicle connect in QGC." }
+          ],
+          checks: [{ text: "PX4 is running and talking to the computer", auto: "px4" }]
+        },
+        {
+          id: "qgc-airframe", title: "Choose the airframe", time: "5 min", level: "easy",
+          body: {ol: [
+            "Reopen QGroundControl and go to **Vehicle Setup → Airframe**.",
+            "Choose **Quadrotor x**, then the closest match for your frame (or *Generic Quadcopter*).",
+            "Click **Apply and Restart** (the button is at the top right of the screen)."
+          ]},
+          warnings: [{ level: "info", text: "Changing the [[airframe]] later resets some settings. You'd need to redo calibration." }],
+          verify: "Name the exact airframe entry for this kit.",
+          checks: ["Airframe set to Quadrotor x (or the kit's specified airframe)", "Vehicle restarted and reconnected"]
+        }
+      ]
+    },
+
+    /* ============ 4. SENSORS ============ */
+    {
+      id: "sensors", title: "Calibrate sensors", icon: "🎯",
+      summary: "Teach the drone which way is up, which way is north and what level looks like.",
+      steps: [
+        {
+          id: "orientation", title: "Set the board orientation (if rotated)", time: "2 min", level: "easy",
+          body: [
+            "If the flight controller arrow points **forward**, skip this step: the default (*ROTATION_NONE*) is correct.",
+            "Otherwise go to **Vehicle Setup → Sensors → Set Orientations** and pick how it's rotated, for example *Yaw 90*."
+          ],
+          checks: ["Orientation is correct (default if the arrow points forward)"]
+        },
+        {
+          id: "compass", title: "Calibrate the compass", time: "5 min", level: "medium",
+          body: {ol: [
+            "Move away from metal tables, laptops and phones.",
+            "In **Sensors**, click **Compass** and follow the picture prompts.",
+            "Hold the drone in each position shown and rotate it until that picture turns green.",
+            "Finish all six positions."
+          ]},
+          media: [{ type: "image", src: "", caption: "Screenshot: compass calibration positions" }],
+          troubleshoot: [
+            { q: "Calibration keeps failing", a: "You're probably near metal or magnets. Try outdoors or on a wooden table, and rotate more slowly and fully." }
+          ],
+          checks: ["Compass calibration finished successfully"]
+        },
+        {
+          id: "accel", title: "Calibrate the gyroscope and accelerometer", time: "5 min", level: "easy",
+          body: {ol: [
+            "**Gyroscope:** set the drone on a still surface, click *Gyroscope* and don't touch it until it's done.",
+            "**Accelerometer:** click *Accelerometer* and place the drone on each of its six sides as prompted. Hold each still until it turns green."
+          ]},
+          checks: ["Gyroscope calibrated", "Accelerometer calibrated (all 6 sides)"]
+        },
+        {
+          id: "level", title: "Level the horizon and check attitude", time: "5 min", level: "easy",
+          body: [
+            "Put the drone on a level surface and run **Level Horizon** in Sensors.",
+            "**Sanity check:** tilt the drone and watch the horizon in QGC, or in the live panel below. Tilt the nose down and the horizon should move up, like in a real cockpit."
+          ],
+          live: ["attitude"],
+          details: "If the horizon moves the wrong way or tilts when the drone is level, the board orientation (step 1 of this phase) is probably wrong.",
+          checks: ["Level horizon done", { text: "Tilting the drone moves the horizon the correct way", auto: "attitude" }]
+        },
+        {
+          id: "gps-check", title: "Check GPS lock", time: "5 min", level: "easy",
+          body: "Take the drone outside with a clear view of the sky (USB power from a laptop is fine). Within a few minutes you should see a **3D fix**, ideally with 10 or more satellites.",
+          live: ["gps"],
+          troubleshoot: [
+            { q: "No fix after 5 minutes", a: "Check the GPS cable and that you're not under trees or near buildings. The first fix of a new module can take longer." }
+          ],
+          checks: [{ text: "GPS shows a 3D fix", auto: "gps3d" }]
+        }
+      ]
+    },
+
+    /* ============ 5. RADIO ============ */
+    {
+      id: "radio", title: "Radio link (ExpressLRS)", icon: "📡",
+      summary: "Bind the handheld radio to the drone, tell PX4 where the receiver is, then calibrate sticks and switches.",
+      steps: [
+        {
+          id: "tx-prep", title: "Prepare the radio transmitter", time: "10 min", level: "easy",
+          body: {ol: [
+            "Charge the [[transmitter]] and turn it on.",
+            "Create a new model (for example *{{drone}}*).",
+            "In model setup, set **Internal RF** (or *External RF* for a module) to **CRSF / ELRS**.",
+            "Confirm stick mode is **Mode 2**: throttle on the left stick."
+          ]},
+          diagram: { type: "sticks" },
+          verify: "Replace with exact menu names for the kit's radio (e.g. EdgeTX version) and confirm the stick mode.",
+          checks: ["Radio is charged and a new model is created", "RF module set to CRSF/ELRS", "Stick mode confirmed"]
+        },
+        {
+          id: "bind", title: "Bind the radio to the receiver", time: "10 min", level: "medium",
+          body: [
+            "The radio and receiver must run the **same major ExpressLRS version** and share the same [[bind phrase]].",
+            {h: "Option A: bind phrase (recommended)"},
+            {ol: [
+              "Set the bind phrase on the transmitter (ELRS Lua script or web UI).",
+              "Set the **same** phrase on the receiver (via its WiFi web page).",
+              "Power both. The receiver LED turns **solid** when connected."
+            ]},
+            {h: "Option B: bind button / bind mode"},
+            {ol: [
+              "Put the receiver in bind mode (the LED double-blinks).",
+              "On the radio, open the **ExpressLRS** tool and choose **Bind**."
+            ]}
+          ],
+          links: [{ label: "ExpressLRS docs", url: "https://www.expresslrs.org/" }],
+          troubleshoot: [
+            { q: "Receiver LED keeps blinking slowly", a: "It's on but not connected. Check the bind phrase matches exactly (it's case sensitive) and that both run the same major ELRS version." },
+            { q: "LED blinks fast", a: "The receiver may be in WiFi mode (it switches automatically after a while without a link). Power-cycle it with the radio on." }
+          ],
+          verify: "LED patterns vary by receiver and ELRS version. Confirm them for this receiver.",
+          checks: ["Receiver LED is solid (connected)"]
+        },
+        {
+          id: "rx-px4", title: "Tell PX4 where the receiver is", time: "10 min", level: "hard",
+          body: [
+            "ELRS receivers speak [[CRSF]]. PX4 needs to know which port the receiver is on.",
+            "In QGC go to **Vehicle Setup → Parameters** and search for each of these:",
+            {table: [
+              ["Parameter", "Set to", "Why"],
+              ["`RC_CRSF_PRT_CFG`", "The port you wrote down (e.g. TELEM2)", "Tells PX4 where the receiver is"],
+              ["`MAV_1_CONFIG` (or `MAV_0_CONFIG`)", "Disabled, if it uses that same port", "Frees the port from MAVLink telemetry"],
+              ["`RC_CRSF_TEL_EN`", "Enabled (optional)", "Sends battery etc. back to your radio"]
+            ]},
+            "Reboot the vehicle (**Tools → Reboot Vehicle** in the Parameters screen)."
+          ],
+          warnings: [
+            { level: "caution", text: "Depending on the PX4 version and board, CRSF support may not be in the default firmware. You may need a firmware build that includes `crsf_rc`. Your kit supplier should provide it." }
+          ],
+          details: "Some boards already assign a MAVLink instance or other function to the port you choose. Un-assign it first, or the CRSF setting won't take effect.",
+          links: [{ label: "PX4: CRSF receivers", url: "https://docs.px4.io/main/en/telemetry/crsf_telemetry" }],
+          verify: "CRITICAL: confirm for the pinned PX4 version and board whether stock firmware includes crsf_rc, and list the exact parameters/values.",
+          checks: ["RC_CRSF_PRT_CFG set to the receiver's port", "Conflicting MAVLink port disabled", "Vehicle rebooted"]
+        },
+        {
+          id: "radio-cal", title: "Calibrate the radio", time: "5 min", level: "easy",
+          body: {ol: [
+            "In QGC go to **Vehicle Setup → Radio** and click **Calibrate**.",
+            "Follow the on-screen prompts: centre sticks, move each stick as shown, then flip every switch through all positions.",
+            "Click **Next** until it finishes."
+          ]},
+          live: ["sticks", "rc"],
+          details: "With the drone connected, the live sticks below mirror your radio. Throttle up should move the throttle dot up, and right roll should move the right dot right. If something moves backwards, reverse that channel on the radio and recalibrate.",
+          troubleshoot: [
+            { q: "No stick movement in QGC", a: "Check the receiver is bound (solid LED), the TX/RX wires are crossed, and the CRSF parameters from the previous step are set. Then reboot." }
+          ],
+          checks: ["Radio calibration completed", { text: "Stick movement shows up on the drone", auto: "rc" }]
+        },
+        {
+          id: "modes", title: "Set up arm switch, flight modes and kill switch", time: "10 min", level: "medium",
+          body: [
+            "Go to **Vehicle Setup → Flight Modes** and assign switches on your radio:",
+            {table: [
+              ["Function", "Suggested switch", "Notes"],
+              ["Arm switch", "2-position switch", "Safer than arming with the sticks"],
+              ["Flight mode", "3-position switch", "Position · Altitude · Stabilized"],
+              ["Kill switch", "Easy-to-reach 2-position switch", "Instantly stops the motors. Emergencies only."],
+              ["Return", "Optional switch", "Flies home and lands"]
+            ]},
+            "Flip each switch and check the matching mode highlights in QGC."
+          ],
+          warnings: [
+            { level: "tip", text: "Start in **Position** mode for first flights. The drone holds its place when you let go of the sticks." }
+          ],
+          verify: "Replace with the kit's standard switch layout (e.g. SA = arm, SB = mode, SF = kill).",
+          checks: ["Arm switch assigned and tested in QGC", "Flight mode switch shows Position / Altitude / Stabilized", "Kill switch assigned and tested"]
+        }
+      ]
+    },
+
+    /* ============ 6. FPV VIDEO ============ */
+    {
+      id: "fpv", title: "FPV video (analog)", icon: "🥽",
+      summary: "Put the video transmitter and goggles on the same channel and get a clear picture.",
+      steps: [
+        {
+          id: "fpv-safety", title: "Video transmitter safety and rules", time: "2 min", level: "easy",
+          warnings: [
+            { level: "danger", text: "**Antenna on before power.** Every time." },
+            { level: "caution", text: "VTXs get hot. On the bench, use the lowest power (25 [[mW]]) and don't leave it running for long." }
+          ],
+          body: [
+            "Before powering on, check that no one nearby is already flying on the channel you'll pick. Two drones on one channel ruin each other's video.",
+            {note: "In the US, many 5.8 GHz FPV channels and power levels require an amateur radio licence. Check the rules where you fly."}
+          ],
+          verify: "Add the region-specific licensing and power rules for where this kit is sold.",
+          checks: ["VTX antenna is attached", "I'll start on low power"]
+        },
+        {
+          id: "vtx-channel", title: "Pick a video channel", time: "2 min", level: "easy",
+          body: "Choose a [[band]] and channel. If you're the only pilot, the highlighted recommendation is fine. With other pilots around, pick channels far apart in frequency.",
+          diagram: { type: "vtx", recommended: { band: "R", ch: 1 } },
+          checks: ["I picked a channel and wrote it down"]
+        },
+        {
+          id: "vtx-set", title: "Set the video transmitter", time: "5 min", level: "medium",
+          body: [
+            "Plug in the battery (props **off**). Set the VTX to **{{vtx}}** at the lowest power.",
+            {ol: [
+              "Press the VTX button to step through channels. Hold it to switch between channel, band and power menus.",
+              "Count the LED blinks to read the current setting (see the VTX manual's table)."
+            ]}
+          ],
+          media: [{ type: "image", src: "", caption: "VTX button and LED location" }],
+          verify: "Replace with the exact button/LED procedure (or SmartAudio/OSD menu) for this VTX.",
+          checks: ["VTX set to my chosen band and channel", "VTX power set to lowest"]
+        },
+        {
+          id: "goggles", title: "Set up the goggles", time: "5 min", level: "easy",
+          body: {ol: [
+            "Screw the antenna onto the goggles. Its polarization (RHCP/LHCP) must match the drone's antenna.",
+            "Power the goggles and set them to **{{vtx}}**, or use their auto-search/scan feature.",
+            "Adjust the IPD (eye spacing) and focus until the picture is sharp."
+          ]},
+          troubleshoot: [
+            { q: "Static or snow only", a: "The channels don't match. Check band AND channel on both. Some goggles label bands differently (e.g. F = Fatshark, R = Race)." },
+            { q: "Picture but very noisy", a: "Check both antennas are tight and the same polarization (RHCP with RHCP)." }
+          ],
+          checks: ["Goggles show a clear picture from the drone camera"]
+        },
+        {
+          id: "image-check", title: "Check the camera picture", time: "3 min", level: "easy",
+          body: [
+            "Look through the goggles and check:",
+            [
+              "Picture is the right way up. If not, the camera menu or mount can flip it.",
+              "The horizon is level when the drone sits flat.",
+              "Moving your hand in front of the camera shows no obvious lag."
+            ],
+            "Unplug the battery when done."
+          ],
+          checks: ["Picture is upright and level", "Battery unplugged"]
+        }
+      ]
+    },
+
+    /* ============ 7. MOTORS & SAFETY ============ */
+    {
+      id: "motors-safety", title: "Motors, power & failsafes", icon: "⚙️",
+      summary: "Set up the battery, test each motor and its direction, and configure what happens when things go wrong.",
+      steps: [
+        {
+          id: "battery-setup", title: "Set up battery monitoring", time: "5 min", level: "medium",
+          body: {ol: [
+            "Go to **Vehicle Setup → Power**.",
+            "Set **Number of cells** to your battery (e.g. 4 for a 4S pack).",
+            "Plug in a charged battery and check the voltage QGC shows matches a multimeter or battery checker. Adjust the voltage divider if needed."
+          ]},
+          live: ["battery"],
+          details: "A fully charged LiPo is 4.2 V per cell. A 4S pack therefore reads about 16.8 V.",
+          verify: "Fill in this kit's power-module calibration values, or say whether they're auto-detected.",
+          checks: ["Cell count set", { text: "Battery voltage is reported", auto: "battery" }, "Voltage matches a multimeter (within ~0.1 V)"]
+        },
+        {
+          id: "actuators", title: "Test motors and their spin direction", time: "15 min", level: "hard",
+          gate: {
+            title: "Props must be OFF",
+            text: "In this step, motors will spin when you move the sliders. Remove all propellers now, and keep fingers and loose items away.",
+            confirm: "All propellers are removed"
+          },
+          body: [
+            "Go to **Vehicle Setup → Actuators**. Check that the motor outputs and the output protocol (e.g. DShot or PWM) match your ESC.",
+            {ol: [
+              "Plug in the battery.",
+              "Enable the slider test, then move each motor's slider up a little, **one motor at a time**.",
+              "Check the motor that spins is in the right position, and spins the right way, as shown below:"
+            ]},
+            "Tap **▶ Play test order** to see which motor should spin and which way."
+          ],
+          diagram: { type: "quadX", mode: "motors" },
+          details: [
+            "**Wrong motor spins?** Reassign outputs on the Actuators screen (some versions have an *Identify & Assign Motors* wizard).",
+            "**Wrong direction?** With [[DShot]] you can reverse it from the Actuators screen. With PWM, swap any two of that motor's three wires."
+          ],
+          verify: "Confirm the Actuators screen labels and the direction-reversal method for the pinned PX4/QGC version.",
+          checks: ["Motor 1–4 positions match the diagram", "Every motor spins in the direction shown", "Battery unplugged"]
+        },
+        {
+          id: "failsafes", title: "Set failsafes", time: "10 min", level: "medium",
+          body: [
+            "Go to **Vehicle Setup → Safety** and set at least these:",
+            {table: [
+              ["Failsafe", "Suggested action"],
+              ["Radio signal lost", "Return (or Land)"],
+              ["Low battery", "Warning, then Return"],
+              ["Critical battery", "Land"],
+              ["Return altitude", "Higher than nearby trees and buildings"]
+            ]},
+            "**Test it (props off):** connect a battery, turn the radio off and check that QGC announces a radio-loss failsafe. Turn the radio back on."
+          ],
+          live: ["messages"],
+          verify: "Fill in the recommended values for this airframe and flying site.",
+          checks: ["Radio-loss failsafe set", "Low-battery failsafe set", "Tested: turning the radio off triggers the failsafe"]
+        },
+        {
+          id: "props", title: "Install the propellers", time: "5 min", level: "medium",
+          warnings: [{ level: "danger", text: "From now on the drone is dangerous. Battery in = treat it as live." }],
+          body: [
+            "Each motor needs a prop made for its direction. Tap a motor to see which prop it needs.",
+            "The **leading edge** (thicker, rounded edge) of the prop goes first in the direction of rotation."
+          ],
+          diagram: { type: "quadX", mode: "props" },
+          details: "Props are often marked CW/CCW or with an R for reversed. Markings vary by brand, so always check against the rotation arrows.",
+          checks: ["Each prop matches its motor's direction", "Prop nuts or screws are tight"]
+        }
+      ]
+    },
+
+    /* ============ 8. FIRST FLIGHT ============ */
+    {
+      id: "fly", title: "First flight", icon: "🛫",
+      summary: "Legal checks, a pre-flight checklist and a short, gentle first hover.",
+      steps: [
+        {
+          id: "rules", title: "Check where you can fly", time: "10 min", level: "easy",
+          body: [
+            "Rules depend on your country and why you're flying. In the US, for example:",
+            [
+              "Drones over 250 g must be **registered** with the FAA.",
+              "Most must broadcast **[[Remote ID]]**.",
+              "Check airspace before flying (e.g. with a B4UFLY or LAANC app), and keep the drone in sight.",
+              "Recreational flyers need the free TRUST certificate. Commercial work needs a Part 107 certificate."
+            ],
+            "Pick a big open field with no people, roads or power lines."
+          ],
+          links: [{ label: "FAA drone information", url: "https://www.faa.gov/uas" }],
+          verify: "Update for the reader's country and the current rules.",
+          checks: ["Drone is registered (if required)", "The flying site is legal and clear of people"]
+        },
+        {
+          id: "preflight", title: "Pre-flight checklist", time: "5 min", level: "easy",
+          body: "Do this before **every** flight.",
+          checks: [
+            "Props tight and undamaged",
+            "Battery fully charged and strapped down",
+            "Radio on BEFORE plugging in the drone battery",
+            "GPS has a 3D fix and QGC (if used) says Ready",
+            "Flight mode switch set to Position",
+            "Goggles show a clear picture",
+            "Spotter briefed, area clear"
+          ]
+        },
+        {
+          id: "first-hover", title: "Do the first hover", time: "5 min", level: "medium",
+          warnings: [{ level: "caution", text: "Stand at least 5 m (15 ft) behind the drone. Know where your **kill switch** is." }],
+          body: {ol: [
+            "Flip the **arm switch**. The motors spin slowly.",
+            "Slowly raise the throttle until the drone lifts off. Climb to about 1–2 m (3–6 ft).",
+            "Centre the throttle. In Position mode it should hold steady.",
+            "Gently test each stick a little.",
+            "Land by lowering the throttle slowly, then **disarm**."
+          ]},
+          troubleshoot: [
+            { q: "Drone flips over on take-off", a: "Disarm immediately. Almost always a wrong motor order, wrong spin direction or a prop on the wrong motor. Go back to Phase 7." },
+            { q: "Drone drifts or circles in Position mode", a: "Usually a compass problem. Recalibrate the compass away from metal, and move the GPS away from power wires." },
+            { q: "Won't arm", a: "QGC shows the reason (e.g. 'Preflight Fail'). Common causes: no GPS fix, a calibration needed, throttle not at zero." }
+          ],
+          live: ["messages"],
+          checks: ["Hovered steadily for at least 30 seconds", "Landed and disarmed"]
+        },
+        {
+          id: "after", title: "After the flight", time: "5 min", level: "easy",
+          body: [
+            [
+              "Unplug the battery and check motors and battery for heat. Warm is fine; too hot to touch is not.",
+              "Put batteries in **Storage** charge mode if you won't fly again in a day or two.",
+              "Optional: upload the flight log to PX4 Flight Review to check vibration and battery health."
+            ]
+          ],
+          links: [{ label: "PX4 Flight Review (logs)", url: "https://review.px4.io/" }],
+          checks: ["Battery unplugged and checked", "Batteries charged or set to storage"]
+        }
+      ]
+    }
+  ]
+};
+</script>
+
+<!-- ══════════════════════════ ENGINE — no need to edit below this line ══════════════════════════ -->
+<script>
+(function () {
+'use strict';
+
+/* ---------------------------------------------------------------- utils */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const EDIT = /[?&]edit\b/.test(location.search);
+const META = GUIDE.meta || {};
+const SET = Object.assign({ requireChecks: true, allowSkip: true, stickMode: 2, rcMap: { roll: 1, pitch: 2, throttle: 3, yaw: 4 }, cells: 4 }, GUIDE.settings || {});
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = () => 'u' + Math.random().toString(36).slice(2, 8);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const fmtTime = iso => { try { return new Date(iso).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }); } catch { return iso; } };
+const MISSING_TERMS = new Set();
+
+/* ---------------------------------------------------------------- steps */
+const PHASES = GUIDE.phases || [];
+const STEPS = [];
+PHASES.forEach((p, pi) => (p.steps || []).forEach((s, si) => STEPS.push(Object.assign({}, s, { _phase: p, _pi: pi, _si: si, _idx: STEPS.length }))));
+const IDX = Object.fromEntries(STEPS.map(s => [s.id, s]));
+const GLOSS = Object.fromEntries(Object.entries(GUIDE.glossary || {}).map(([k, v]) => [k.toLowerCase(), { term: k, def: v }]));
+
+function normChecks(s) {
+  const out = [];
+  if (s.checklistFrom === 'parts') (GUIDE.parts || []).forEach(p => out.push({ key: 'part-' + p.id, text: `${p.qty > 1 ? p.qty + '× ' : ''}${p.name}` }));
+  (s.checks || []).forEach((c, i) => {
+    const o = typeof c === 'string' ? { text: c } : Object.assign({}, c);
+    o.key = o.id || 'c' + i;
+    out.push(o);
+  });
+  return out;
+}
+
+/* ---------------------------------------------------------------- state */
+const KEY = 'droneguide:' + (META.id || 'guide');
+const defaults = () => ({ current: STEPS[0] && STEPS[0].id, steps: {}, acks: {}, detail: 'simple', theme: matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark', builder: { name: '', drone: '' }, prefs: {}, started: new Date().toISOString(), liveSeen: null });
+let S = (() => { try { return Object.assign(defaults(), JSON.parse(localStorage.getItem(KEY) || '{}')); } catch { return defaults(); } })();
+let saveT;
+const save = () => { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* private mode */ } }, 120); };
+const st = id => (S.steps[id] = S.steps[id] || { checks: {}, status: 'todo', note: '' });
+const isTicked = (s, c) => !!st(s.id).checks[c.key];
+const remaining = s => normChecks(s).filter(c => !isTicked(s, c)).length;
+const doneCount = () => STEPS.filter(s => (S.steps[s.id] || {}).status === 'done').length;
+
+/* ---------------------------------------------------------------- rich text */
+function tokens(s) {
+  return s.replace(/\{\{(\w+)\}\}/g, (m, k) => {
+    if (k === 'drone') return META.drone || 'your drone';
+    if (k === 'support') return META.support || 'your instructor';
+    if (k === 'vtx') { const v = S.prefs.vtx; return v ? `Band ${v.band}, Channel ${v.ch} (${VTX_BANDS[v.band].f[v.ch - 1]} MHz)` : 'the channel you picked'; }
+    return m;
+  });
+}
+function inline(raw) {
+  let s = esc(tokens(String(raw ?? '')));
+  const codes = [];
+  s = s.replace(/`([^`]+)`/g, (m, c) => { codes.push(c); return `\u0000${codes.length - 1}\u0000`; });
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+       .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>')
+       .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (m, t, label) => {
+         const g = GLOSS[t.toLowerCase().trim()];
+         if (!g) { MISSING_TERMS.add(t); return esc(label || t); }
+         return `<button type="button" class="term" data-act="term" data-term="${esc(t.toLowerCase().trim())}">${label || t}</button>`;
+       })
+       .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, txt, url) => /^\s*javascript:/i.test(url) ? txt : `<a href="${url}" target="_blank" rel="noopener">${txt}</a>`);
+  return s.replace(/\u0000(\d+)\u0000/g, (m, i) => `<code>${codes[i]}</code>`);
+}
+function rich(b) {
+  if (b == null || b === '') return '';
+  if (typeof b === 'string') return `<p>${inline(b)}</p>`;
+  if (!Array.isArray(b)) b = [b];
+  return b.map(item => {
+    if (typeof item === 'string') return `<p>${inline(item)}</p>`;
+    if (Array.isArray(item)) return `<ul>${item.map(li => `<li>${inline(li)}</li>`).join('')}</ul>`;
+    if (!item || typeof item !== 'object') return '';
+    if (item.ol) return `<ol>${item.ol.map(li => `<li>${inline(li)}</li>`).join('')}</ol>`;
+    if (item.h) return `<h3>${inline(item.h)}</h3>`;
+    if (item.note) return `<p class="note">${inline(item.note)}</p>`;
+    if (item.code) return `<pre><code>${esc(item.code)}</code></pre>`;
+    if (item.table) { const [h, ...rows] = item.table; return `<table><thead><tr>${h.map(c => `<th>${inline(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${inline(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`; }
+    return '';
+  }).join('');
+}
+const flat = b => b == null ? '' : typeof b === 'string' ? b : Array.isArray(b) ? b.map(flat).join(' ') : typeof b === 'object' ? Object.values(b).map(flat).join(' ') : String(b);
+
+/* ================================================================ LIVE LINK (Web Serial + MAVLink) */
+const LIVE = { connected: false, demo: false, port: null, reader: null, source: '', vid: null, hb: null, rc: null, att: null, gps: null, bat: null, msgs: [], err: '', frames: 0 };
+const fresh = (o, ms = 3000) => !!o && Date.now() - o.t < ms;
+const CRC_EXTRA = { 0: 50, 1: 124, 24: 24, 30: 39, 65: 118, 253: 83 };
+const MAXLEN = { 0: 9, 1: 43, 24: 52, 30: 28, 65: 42, 253: 54 }; // incl. MAVLink 2 extension fields
+const AUTOPILOT = { 0: 'Generic', 3: 'ArduPilot', 12: 'PX4', 8: 'None' };
+const MAVTYPE = { 0: 'Generic', 1: 'Fixed wing', 2: 'Quadrotor', 4: 'Helicopter', 10: 'Ground rover', 13: 'Hexarotor', 14: 'Octorotor', 15: 'Tricopter', 19: 'VTOL', 20: 'VTOL', 21: 'VTOL', 22: 'VTOL' };
+const SYSSTATUS = ['Uninitialised', 'Booting', 'Calibrating', 'Standby (ready)', 'Active', 'Critical', 'Emergency', 'Power off', 'Terminated'];
+const FIX = ['No GPS', 'No fix', '2D fix', '3D fix', 'DGPS', 'RTK float', 'RTK fixed', 'Static', 'PPP'];
+const USB_VENDORS = { 0x26AC: 'PX4 / 3D Robotics', 0x3162: 'Holybro', 0x2DAE: 'CubePilot', 0x1209: 'pid.codes (open hardware)', 0x0483: 'STMicroelectronics', 0x10C4: 'Silicon Labs USB-serial (telemetry radio?)', 0x0403: 'FTDI USB-serial', 0x1A86: 'CH340 USB-serial' };
+
+function crcAcc(b, crc) { let t = (b ^ (crc & 0xff)) & 0xff; t = (t ^ (t << 4)) & 0xff; return ((crc >> 8) ^ (t << 8) ^ (t << 3) ^ (t >> 4)) & 0xffff; }
+
+let rxBuf = new Uint8Array(0);
+function feed(chunk) {
+  const n = new Uint8Array(rxBuf.length + chunk.length); n.set(rxBuf); n.set(chunk, rxBuf.length); rxBuf = n;
+  let i = 0;
+  while (i < rxBuf.length) {
+    const m = rxBuf[i];
+    if (m !== 0xFE && m !== 0xFD) { i++; continue; }
+    const v2 = m === 0xFD, hdr = v2 ? 10 : 6;
+    if (i + hdr > rxBuf.length) break;
+    const len = rxBuf[i + 1];
+    const msgid = v2 ? (rxBuf[i + 7] | (rxBuf[i + 8] << 8) | (rxBuf[i + 9] << 16)) : rxBuf[i + 5];
+    const extra = CRC_EXTRA[msgid];
+    // Reject false headers early: unknown id, oversize length, or undefined v2 incompat flags
+    if (extra === undefined || len > MAXLEN[msgid] || (v2 && (rxBuf[i + 2] & 0xFE))) { i++; continue; }
+    const sig = v2 && (rxBuf[i + 2] & 1) ? 13 : 0;
+    const total = hdr + len + 2 + sig;
+    if (i + total > rxBuf.length) break;
+    let crc = 0xffff;
+    for (let k = i + 1; k < i + hdr + len; k++) crc = crcAcc(rxBuf[k], crc);
+    crc = crcAcc(extra, crc);
+    if (crc !== (rxBuf[i + hdr + len] | (rxBuf[i + hdr + len + 1] << 8))) { i++; continue; }
+    handleMsg(msgid, rxBuf.slice(i + hdr, i + hdr + len), rxBuf[i + (v2 ? 5 : 3)], rxBuf[i + (v2 ? 6 : 4)]);
+    i += total;
+  }
+  rxBuf = rxBuf.slice(i);
+  if (rxBuf.length > 8192) rxBuf = rxBuf.slice(-1024);
+}
+function view(p, full) { const b = new Uint8Array(Math.max(full, p.length)); b.set(p); return new DataView(b.buffer); }
+function handleMsg(id, p, sys, comp) {
+  const now = Date.now(); LIVE.frames++;
+  if (id === 0) {
+    const d = view(p, 9); const autopilot = d.getUint8(5);
+    if (autopilot === 8) return; // a GCS or non-autopilot component
+    LIVE.hb = { custom: d.getUint32(0, true), type: d.getUint8(4), autopilot, base: d.getUint8(6), status: d.getUint8(7), sys, comp, t: now };
+    if (!S.liveSeen) { S.liveSeen = { at: new Date().toISOString(), autopilot: AUTOPILOT[autopilot] || autopilot, type: MAVTYPE[LIVE.hb.type] || LIVE.hb.type }; save(); }
+  } else if (id === 1) {
+    const d = view(p, 31); const mv = d.getUint16(14, true), ca = d.getInt16(16, true), rem = d.getInt8(30);
+    LIVE.bat = { v: mv === 65535 ? null : mv / 1000, cur: ca === -1 ? null : ca / 100, rem: rem < 0 ? null : rem, t: now };
+  } else if (id === 24) {
+    const d = view(p, 30); LIVE.gps = { fix: d.getUint8(28), sats: d.getUint8(29), eph: d.getUint16(20, true), t: now };
+  } else if (id === 30) {
+    const d = view(p, 28); LIVE.att = { roll: d.getFloat32(4, true), pitch: d.getFloat32(8, true), yaw: d.getFloat32(12, true), t: now };
+  } else if (id === 65) {
+    const d = view(p, 42); const ch = []; for (let k = 0; k < 18; k++) ch.push(d.getUint16(4 + k * 2, true));
+    LIVE.rc = { ch, count: d.getUint8(40), rssi: d.getUint8(41), t: now };
+  } else if (id === 253) {
+    const d = view(p, 51); let txt = ''; for (let k = 1; k < 51; k++) { const c = d.getUint8(k); if (!c) break; txt += String.fromCharCode(c); }
+    LIVE.msgs.unshift({ sev: d.getUint8(0), txt, t: now }); LIVE.msgs.length = Math.min(LIVE.msgs.length, 40);
+  }
+  dirty();
+}
+function gcsHeartbeat() {
+  const f = new Uint8Array(17); let seq = (gcsHeartbeat.seq = ((gcsHeartbeat.seq || 0) + 1) & 0xff);
+  f.set([0xFE, 9, seq, 255, 190, 0, 0, 0, 0, 0, 6, 8, 0, 0, 3]);
+  let crc = 0xffff; for (let k = 1; k < 15; k++) crc = crcAcc(f[k], crc); crc = crcAcc(50, crc);
+  f[15] = crc & 0xff; f[16] = crc >> 8; return f;
+}
+async function connectSerial() {
+  LIVE.err = '';
+  if (!('serial' in navigator)) { LIVE.err = 'This browser cannot talk to USB devices. Use Chrome or Edge on a desktop computer, or try Demo mode.'; dirty(true); return; }
+  try {
+    stopDemo();
+    const port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 115200 });
+    Object.assign(LIVE, { port, connected: true, demo: false, source: 'USB', vid: port.getInfo().usbVendorId ?? null, frames: 0 });
+    LIVE.txTimer = setInterval(async () => {
+      if (!LIVE.port || !LIVE.port.writable) return;
+      try { const w = LIVE.port.writable.getWriter(); await w.write(gcsHeartbeat()); w.releaseLock(); } catch (e) { /* ignore */ }
+    }, 1000);
+    dirty(true);
+    readLoop();
+  } catch (e) {
+    if (e && e.name === 'NotFoundError') return; // user cancelled the picker
+    LIVE.err = (e && e.name === 'InvalidStateError') || /open/i.test(e && e.message) ? 'Could not open the port. Close QGroundControl (or anything else using it) and try again.' : String(e && e.message || e);
+    dirty(true);
+  }
+}
+async function readLoop() {
+  while (LIVE.port && LIVE.port.readable) {
+    LIVE.reader = LIVE.port.readable.getReader();
+    try { for (;;) { const { value, done } = await LIVE.reader.read(); if (done) break; if (value) feed(value); } }
+    catch (e) { LIVE.err = 'Connection lost (' + (e.message || e.name) + ').'; break; }
+    finally { try { LIVE.reader.releaseLock(); } catch (e) { /* */ } }
+  }
+  disconnect(true);
+}
+async function disconnect(silent) {
+  clearInterval(LIVE.txTimer);
+  const port = LIVE.port; LIVE.port = null;
+  try { if (LIVE.reader) await LIVE.reader.cancel(); } catch (e) { /* */ }
+  try { if (port) await port.close(); } catch (e) { /* */ }
+  stopDemo();
+  Object.assign(LIVE, { connected: false, source: '', hb: null, rc: null, att: null, gps: null, bat: null });
+  if (!silent) LIVE.err = '';
+  dirty(true);
+}
+function startDemo() {
+  if (LIVE.port) disconnect(true);
+  Object.assign(LIVE, { demo: true, connected: true, source: 'Demo', err: '', msgs: [] });
+  const t0 = performance.now(); let said = 0;
+  LIVE.demoT = setInterval(() => {
+    const t = (performance.now() - t0) / 1000, now = Date.now(), s = Math.sin;
+    LIVE.hb = { autopilot: 12, type: 2, base: 0, status: 3, sys: 1, comp: 1, t: now };
+    LIVE.rc = { ch: [1500 + 380 * s(t * 0.9), 1500 + 380 * s(t * 0.7 + 1), 1500 + 480 * s(t * 0.45), 1500 + 300 * Math.cos(t * 1.1), 1000, t % 8 < 4 ? 1000 : 2000, 1500, 1000].map(Math.round), count: 16, rssi: 210, t: now };
+    LIVE.att = { roll: 0.4 * s(t * 0.6), pitch: 0.3 * s(t * 0.43 + 0.5), yaw: ((t * 0.3) % (2 * Math.PI)) - Math.PI, t: now };
+    LIVE.gps = { fix: t > 4 ? 3 : 1, sats: t > 4 ? Math.min(15, 6 + Math.floor(t / 2)) : 2, eph: t > 4 ? 90 : 9999, t: now };
+    LIVE.bat = { v: 16.45 - t * 0.001, cur: 0.4, rem: 97, t: now };
+    if (said === 0 && t > 1) { said = 1; LIVE.msgs.unshift({ sev: 6, txt: 'Demo: [commander] Ready for takeoff!', t: now }); }
+    if (said === 1 && t > 6) { said = 2; LIVE.msgs.unshift({ sev: 4, txt: 'Demo: Preflight Fail: No manual control input', t: now }); }
+    dirty();
+  }, 80);
+  dirty(true);
+}
+function stopDemo() { clearInterval(LIVE.demoT); if (LIVE.demo) { LIVE.demo = false; LIVE.connected = false; LIVE.source = ''; LIVE.hb = LIVE.rc = LIVE.att = LIVE.gps = LIVE.bat = null; } }
+if ('serial' in navigator) navigator.serial.addEventListener('disconnect', e => { if (LIVE.port && e.target === LIVE.port) { LIVE.err = 'Drone unplugged.'; disconnect(true); } });
+
+/* auto-check conditions (ticks boxes automatically when a REAL drone is connected) */
+const AUTO = {
+  link: L => fresh(L.hb),
+  px4: L => fresh(L.hb) && L.hb.autopilot === 12,
+  disarmed: L => fresh(L.hb) && !(L.hb.base & 128),
+  rc: L => fresh(L.rc, 1500) && L.rc.count > 0 && L.rc.ch.slice(0, 4).some(v => v > 900 && v < 2100 && Math.abs(v - 1500) > 150),
+  attitude: L => fresh(L.att, 1500) && (Math.abs(L.att.roll) > 0.35 || Math.abs(L.att.pitch) > 0.35),
+  gps3d: L => fresh(L.gps) && L.gps.fix >= 3,
+  battery: L => fresh(L.bat) && L.bat.v > 1
+};
+
+let liveDirty = false, structDirty = false;
+function dirty(structural) { liveDirty = true; if (structural) structDirty = true; }
+setInterval(() => {
+  if (!liveDirty) return; liveDirty = false;
+  if (structDirty) { structDirty = false; if ($('#modal .live-modal')) openLive(); }
+  updateLive(); autoTick();
+}, 90);
+setInterval(() => dirty(), 1000); // staleness refresh
+
+/* ---------------------------------------------------------------- live widgets */
+const waitMsg = () => `<div class="lw-wait">${LIVE.connected ? 'Connected. Waiting for this data…' : 'Not connected.'}
+  ${LIVE.connected ? '' : `<button class="btn small primary" data-act="connect">Connect drone (USB)</button><button class="btn small" data-act="demo">Try demo</button>`}</div>`;
+const kv = (label, val, cls = '') => `<div><small>${label}</small><b class="${cls}">${val}</b></div>`;
+const deg = r => (r * 180 / Math.PI).toFixed(0) + '°';
+
+const WIDGETS = {
+  link: { title: 'Connection', render() {
+    if (!LIVE.connected) return `<div class="lw-wait">${'serial' in navigator ? 'Plug the drone in over USB (no battery needed), close QGroundControl, then:' : 'Live checks need Chrome or Edge on a desktop computer.'}
+      ${'serial' in navigator ? '<button class="btn small primary" data-act="connect">Connect drone (USB)</button>' : ''}<button class="btn small" data-act="demo">Try demo</button></div>${LIVE.err ? `<p class="bad" style="margin:10px 0 0">${esc(LIVE.err)}</p>` : ''}`;
+    return `<div class="kv">${kv('Source', LIVE.demo ? 'Demo (simulated)' : 'USB')}${kv('USB device', LIVE.vid != null ? esc(USB_VENDORS[LIVE.vid] || '0x' + LIVE.vid.toString(16)) : '—')}${kv('Heartbeat', fresh(LIVE.hb) ? 'Receiving' : 'Waiting…', fresh(LIVE.hb) ? 'good' : 'meh')}</div>
+      <div class="dg-tools"><button class="btn small" data-act="disconnect">Disconnect</button></div>`;
+  } },
+  heartbeat: { title: 'Autopilot', render() {
+    const h = LIVE.hb; if (!fresh(h)) return waitMsg();
+    return `<div class="kv">${kv('Autopilot', AUTOPILOT[h.autopilot] || h.autopilot, h.autopilot === 12 ? 'good' : 'meh')}${kv('Vehicle', MAVTYPE[h.type] || 'Type ' + h.type)}${kv('State', h.base & 128 ? 'ARMED' : 'Disarmed', h.base & 128 ? 'bad' : 'good')}${kv('Status', SYSSTATUS[h.status] || h.status)}</div>`;
+  } },
+  rc: { title: 'Radio channels', render() {
+    const r = LIVE.rc; if (!fresh(r, 1500)) return waitMsg();
+    if (!r.count) return `<p class="meh">The drone sees no radio receiver. Check binding and wiring.</p>`;
+    const names = {}; Object.entries(SET.rcMap).forEach(([k, v]) => names[v] = k);
+    return `<div class="chbars">${r.ch.slice(0, Math.min(8, r.count)).map((v, i) => { const pct = clamp((v - 1000) / 10, 0, 100); return `<div class="chbar"><span>CH${i + 1}${names[i + 1] ? ' ' + names[i + 1].slice(0, 4) : ''}</span><div class="tr"><i style="width:${pct}%"></i></div><span>${v}</span></div>`; }).join('')}</div>
+      <p class="note" style="margin:10px 0 0;font-size:13px;color:var(--muted)">Link quality: ${r.rssi === 255 ? 'not reported' : Math.round(r.rssi / 2.54) + '%'}</p>`;
+  } },
+  sticks: { title: 'Sticks', render(o = {}) {
+    const mode = Number(o.mode || SET.stickMode), r = fresh(LIVE.rc, 1500) && LIVE.rc.count ? LIVE.rc : null;
+    const ch = n => r ? clamp((r.ch[n - 1] - 1500) / 500, -1, 1) : null, M = SET.rcMap;
+    const T = ch(M.throttle), Y = ch(M.yaw), P = ch(M.pitch), R = ch(M.roll);
+    const left = mode === 2 ? { x: Y, y: T, xl: 'Yaw', yl: 'Throttle' } : { x: Y, y: P, xl: 'Yaw', yl: 'Pitch' };
+    const right = mode === 2 ? { x: R, y: P, xl: 'Roll', yl: 'Pitch' } : { x: R, y: T, xl: 'Roll', yl: 'Throttle' };
+    const g = (s, name) => { const cx = 85 + (s.x ?? 0) * 55, cy = 85 - ((s.y ?? (s.yl === 'Throttle' ? -1 : 0)) * 55);
+      return `<div class="gimbal"><svg viewBox="0 0 170 170"><rect class="gbox" x="18" y="18" width="134" height="134" rx="18"/><line class="gx" x1="85" y1="24" x2="85" y2="146"/><line class="gx" x1="24" y1="85" x2="146" y2="85"/>
+        <text class="glbl" x="85" y="13">${s.yl} ▲</text><text class="glbl" x="85" y="166">▼</text><text class="glbl" x="10" y="89" style="text-anchor:start">◀</text><text class="glbl" x="160" y="89" style="text-anchor:end">▶</text>
+        <circle class="gdot" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="11"/></svg><div>${name}: ${s.yl} ↕ · ${s.xl} ↔</div></div>`; };
+    return `<div class="sticks">${g(left, 'Left stick')}${g(right, 'Right stick')}</div>
+      <p class="note" style="margin:8px 0 0;text-align:center;font-size:13px;color:var(--muted)">Mode ${mode}${r ? ' · showing live stick positions' : ' · connect the drone to see your sticks move here'}</p>`;
+  } },
+  attitude: { title: 'Attitude (horizon)', render() {
+    const a = LIVE.att; if (!fresh(a, 1500)) return waitMsg();
+    const rd = -a.roll * 180 / Math.PI, py = clamp(a.pitch * 180 / Math.PI * 2, -80, 80);
+    return `<div class="horizon"><svg viewBox="-90 -90 180 180"><defs><clipPath id="hz"><circle r="86"/></clipPath></defs>
+      <g clip-path="url(#hz)"><g transform="rotate(${rd.toFixed(1)}) translate(0 ${py.toFixed(1)})"><rect x="-200" y="-400" width="400" height="400" fill="#3a8fd9"/><rect x="-200" y="0" width="400" height="400" fill="#8a5a2b"/><line x1="-200" x2="200" y1="0" y2="0" stroke="#fff" stroke-width="2"/>
+      ${[-20, -10, 10, 20].map(p => `<line x1="-14" x2="14" y1="${-p * 2}" y2="${-p * 2}" stroke="#fff" stroke-width="1.2"/>`).join('')}</g></g>
+      <circle r="86" fill="none" stroke="var(--line2)" stroke-width="3"/><path d="M-46 0h30l8 8 8-8h30" fill="none" stroke="#ffb020" stroke-width="4" stroke-linecap="round"/></svg>
+      <div class="kv" style="flex:1">${kv('Roll', deg(a.roll))}${kv('Pitch', deg(a.pitch))}${kv('Heading', ((a.yaw * 180 / Math.PI + 360) % 360).toFixed(0) + '°')}</div></div>`;
+  } },
+  gps: { title: 'GPS', render() {
+    const g = LIVE.gps; if (!fresh(g)) return waitMsg();
+    return `<div class="kv">${kv('Fix', FIX[g.fix] || g.fix, g.fix >= 3 ? 'good' : 'meh')}${kv('Satellites', g.sats, g.sats >= 10 ? 'good' : g.sats >= 6 ? 'meh' : 'bad')}${kv('Accuracy', g.eph >= 9999 || g.eph === 65535 ? '—' : '±' + (g.eph / 100).toFixed(1) + ' m')}</div>`;
+  } },
+  battery: { title: 'Battery', render() {
+    const b = LIVE.bat; if (!fresh(b) || b.v == null) return waitMsg();
+    const cell = b.v / (S.prefs.cells || SET.cells);
+    return `<div class="kv">${kv('Voltage', b.v.toFixed(2) + ' V')}${kv('Per cell (' + (S.prefs.cells || SET.cells) + 'S)', cell.toFixed(2) + ' V', cell > 3.7 ? 'good' : cell > 3.5 ? 'meh' : 'bad')}${kv('Current', b.cur == null ? '—' : b.cur.toFixed(1) + ' A')}${kv('Remaining', b.rem == null ? '—' : b.rem + '%')}</div>
+      ${b.v < 6 ? '<p class="note" style="margin:8px 0 0;color:var(--muted);font-size:13px">Very low reading: probably USB power only. Plug in a flight battery (props off).</p>' : ''}`;
+  } },
+  messages: { title: 'Messages from the drone', render() {
+    if (!LIVE.connected) return waitMsg();
+    if (!LIVE.msgs.length) return '<div class="lw-wait">No messages yet. PX4 reports problems here (e.g. why it won\'t arm).</div>';
+    return `<div class="msgs">${LIVE.msgs.slice(0, 12).map(m => `<div class="sev${m.sev}">${new Date(m.t).toLocaleTimeString()} · ${esc(m.txt)}</div>`).join('')}</div>`;
+  } }
+};
+function widgetBox(type, opts) {
+  const w = WIDGETS[type]; if (!w) return '';
+  return `<div class="lw" data-live="${type}" data-opts='${esc(JSON.stringify(opts || {}))}'><div class="lw-h"><span class="d"></span>LIVE · ${w.title}<span class="src"></span></div><div class="lw-b">${w.render(opts || {})}</div></div>`;
+}
+function updateLive() {
+  $$('[data-live]').forEach(el => {
+    const type = el.dataset.live, w = WIDGETS[type]; let opts = {};
+    try { opts = JSON.parse(el.dataset.opts || '{}'); } catch (e) { /* */ }
+    el.classList.toggle('fresh', LIVE.connected && !LIVE.demo && fresh(LIVE.hb));
+    el.classList.toggle('demo', LIVE.demo);
+    $('.src', el).textContent = LIVE.demo ? 'DEMO DATA' : LIVE.connected ? 'USB' : '';
+    const body = $('.lw-b', el); const html = w.render(opts);
+    if (body._html !== html) { body.innerHTML = html; body._html = html; }
+  });
+  const b = $('#livebtn'); if (b) {
+    b.classList.toggle('on', LIVE.connected && !LIVE.demo); b.classList.toggle('demo', LIVE.demo);
+    const h = fresh(LIVE.hb) ? LIVE.hb : null;
+    $('.lbl', b).textContent = LIVE.demo ? 'Demo mode' : LIVE.connected ? (h ? `${AUTOPILOT[h.autopilot] || 'Drone'} · ${h.base & 128 ? 'ARMED' : 'disarmed'}` : 'Connected…') : 'Connect drone';
+  }
+}
+function autoTick() {
+  if (!LIVE.connected || LIVE.demo) return;
+  const s = IDX[S.current]; if (!s || (s.gate && !S.acks[s.id])) return;
+  let changed = false;
+  normChecks(s).forEach(c => { if (c.auto && AUTO[c.auto] && !isTicked(s, c) && AUTO[c.auto](LIVE)) { st(s.id).checks[c.key] = true; changed = true; } });
+  if (changed) { save(); renderChecks(s); updateFoot(s); }
+}
+
+/* ================================================================ DIAGRAMS */
+const VTX_BANDS = {
+  A: { name: 'A (Boscam A)', f: [5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725] },
+  B: { name: 'B (Boscam B)', f: [5733, 5752, 5771, 5790, 5809, 5828, 5847, 5866] },
+  E: { name: 'E (Boscam E)', f: [5705, 5685, 5665, 5645, 5885, 5905, 5925, 5945] },
+  F: { name: 'F (Fatshark)', f: [5740, 5760, 5780, 5800, 5820, 5840, 5860, 5880] },
+  R: { name: 'R (Raceband)', f: [5658, 5695, 5732, 5769, 5806, 5843, 5880, 5917] }
+};
+const pt = (cx, cy, r, a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+
+const DIAGRAMS = {
+  /* PX4 quad X motor order + spin direction. options: mode:"motors"|"props", motors:[{n,x,y,dir}] */
+  quadX(o) {
+    const id = uid(), R = 95;
+    const motors = o.motors || [{ n: 1, x: 1, y: -1, dir: 'CCW' }, { n: 2, x: -1, y: 1, dir: 'CCW' }, { n: 3, x: -1, y: -1, dir: 'CW' }, { n: 4, x: 1, y: 1, dir: 'CW' }];
+    const pos = m => `${m.y < 0 ? 'front' : 'rear'}-${m.x > 0 ? 'right' : 'left'}`;
+    const svgM = motors.map(m => {
+      const cx = m.x * R, cy = m.y * R, cw = m.dir === 'CW', r = 28, a0 = -2.4, a1 = 1.6;
+      const s = pt(cx, cy, r, cw ? a0 : a1), e = pt(cx, cy, r, cw ? a1 : a0);
+      const ea = cw ? a1 : a0, tang = ea + (cw ? Math.PI / 2 : -Math.PI / 2);
+      const tip = [e[0] + 9 * Math.cos(tang), e[1] + 9 * Math.sin(tang)], b1 = pt(e[0], e[1], 6, ea), b2 = pt(e[0], e[1], -6, ea);
+      return `<g class="motor" data-n="${m.n}" data-dir="${m.dir}" data-pos="${pos(m)}" tabindex="0" role="button" aria-label="Motor ${m.n}, ${pos(m)}, ${cw ? 'clockwise' : 'counter-clockwise'}">
+        <circle class="propdisc ${m.dir}" cx="${cx}" cy="${cy}" r="44"/>
+        <g class="spin ${m.dir}" style="transform-origin:${cx}px ${cy}px">
+          <path class="rot ${m.dir}" d="M${s[0].toFixed(1)} ${s[1].toFixed(1)} A${r} ${r} 0 1 ${cw ? 1 : 0} ${e[0].toFixed(1)} ${e[1].toFixed(1)}"/>
+          <path class="head ${m.dir}" d="M${tip[0].toFixed(1)} ${tip[1].toFixed(1)} L${b1[0].toFixed(1)} ${b1[1].toFixed(1)} L${b2[0].toFixed(1)} ${b2[1].toFixed(1)}Z"/>
+        </g>
+        <circle class="hub" cx="${cx}" cy="${cy}" r="15"/><text class="num" x="${cx}" y="${cy}">${m.n}</text>
+        <text class="dirlbl" x="${cx}" y="${cy + (m.y < 0 ? -54 : 62)}">${cw ? 'CW · clockwise' : 'CCW · counter'}</text></g>`;
+    }).join('');
+    const html = `<div class="dg"><div class="dg-title">${o.mode === 'props' ? 'Propeller direction' : 'Motor order & spin direction'} · PX4 Quad X · top view</div>
+      <svg viewBox="-170 -185 340 360" role="img" aria-label="Quadcopter motor diagram">
+        <text class="front" x="0" y="-160">▲ FRONT ▲</text>
+        ${motors.map(m => `<line class="arm" x1="0" y1="0" x2="${m.x * R}" y2="${m.y * R}"/>`).join('')}
+        <rect class="body" x="-34" y="-46" width="68" height="92" rx="12"/><path d="M0 -36 L10 -20 H-10Z" fill="var(--accent)"/>
+        ${svgM}</svg>
+      <div class="legend"><span><i style="background:var(--accent)"></i>CW, clockwise</span><span><i style="background:var(--info)"></i>CCW, counter-clockwise</span></div>
+      <div class="dg-info" id="${id}-i">Tap a motor for details.</div>
+      <div class="dg-tools"><button class="btn small" id="${id}-p">▶ Play test order</button></div></div>`;
+    return { html, mount(root) {
+      const info = $('#' + id + '-i', root), svg = $('svg', root);
+      const show = g => {
+        $$('.motor', svg).forEach(x => x.classList.toggle('hl', x === g)); const cw = g.dataset.dir === 'CW';
+        info.innerHTML = `<b>Motor ${g.dataset.n}</b> · ${g.dataset.pos} · spins <b>${cw ? 'clockwise ↻' : 'counter-clockwise ↺'}</b>` +
+          (o.mode === 'props' ? `<br>Fit a <b>${g.dataset.dir}</b> propeller here. Its leading (thicker) edge faces the ${cw ? 'clockwise' : 'counter-clockwise'} direction.` : ` (seen from above).`);
+      };
+      $$('.motor', svg).forEach(g => { g.addEventListener('click', () => show(g)); g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); show(g); } }); });
+      $('#' + id + '-p', root).addEventListener('click', () => {
+        const order = [...$$('.motor', svg)].sort((a, b) => a.dataset.n - b.dataset.n); let k = 0;
+        clearInterval(root._t); const tick = () => { if (k >= order.length) { clearInterval(root._t); return; } show(order[k++]); };
+        tick(); root._t = setInterval(tick, 1400);
+      });
+    } };
+  },
+
+  /* System wiring. options: focus:[ids] highlights those parts; components / links can be overridden */
+  wiring(o) {
+    const id = uid();
+    const C = o.components || [
+      { id: 'gps', label: 'GPS + compass', x: 320, y: 40, note: 'Plugs into the FC **GPS** port. Mount high and away from power wires.' },
+      { id: 'rx', label: 'ELRS receiver', x: 95, y: 105, note: 'Connects to a spare FC serial port (UART). **TX→RX, RX→TX**, plus 5V and GND.' },
+      { id: 'usb', label: 'Computer (USB)', x: 95, y: 200, note: 'For setup only: QGroundControl and the live checks in this guide.' },
+      { id: 'fc', label: 'Flight controller', x: 320, y: 175, w: 170, h: 74, cls: 'fc', note: 'The brain. Arrow points forward.' },
+      { id: 'cam', label: 'FPV camera', x: 545, y: 60, note: 'Video signal goes to the VTX.' },
+      { id: 'vtx', label: 'Video TX (VTX)', x: 545, y: 175, note: '**Antenna on before power.** Check its input voltage.' },
+      { id: 'bat', label: 'LiPo battery', x: 70, y: 335, w: 112, note: 'Main power via XT60. Connect last, props off while testing.' },
+      { id: 'pm', label: 'Power module', x: 232, y: 335, w: 112, note: 'Powers the FC (POWER port) and reports voltage/current.' },
+      { id: 'esc', label: '4-in-1 ESC', x: 400, y: 335, w: 112, note: 'Gets battery power; gets motor signals from the FC outputs. Many have a VBAT/9V pad that can power the VTX.' },
+      { id: 'motors', label: 'Motors ×4', x: 570, y: 335, w: 112, note: 'Three wires each. Swap any two to reverse direction.' }
+    ];
+    const L = o.links || [
+      { from: 'gps', to: 'fc', kind: 'data', label: 'GPS port' },
+      { from: 'rx', to: 'fc', kind: 'signal', label: 'UART (TX↔RX)' },
+      { from: 'usb', to: 'fc', kind: 'data', label: 'USB' },
+      { from: 'cam', to: 'vtx', kind: 'video', label: 'video' },
+      { from: 'bat', to: 'pm', kind: 'power', label: 'XT60', dy: -10 },
+      { from: 'pm', to: 'fc', kind: 'power', label: 'POWER port', dx: -42 },
+      { from: 'pm', to: 'esc', kind: 'power', label: 'VBAT', dy: -10 },
+      { from: 'esc', to: 'motors', kind: 'power', label: '×4', dy: -10 },
+      { from: 'fc', to: 'esc', kind: 'signal', label: 'motor outputs', dx: 40 },
+      { from: 'esc', to: 'vtx', kind: 'power', label: 'VTX power (check V)', dx: 48 }
+    ];
+    const byId = Object.fromEntries(C.map(c => [c.id, c])), focus = o.focus || [];
+    const wires = L.map((l, i) => { const a = byId[l.from], b = byId[l.to]; if (!a || !b) return ''; const mx = (a.x + b.x) / 2 + (l.dx || 0), my = (a.y + b.y) / 2 + (l.dy || 0);
+      const on = focus.length && focus.includes(l.from) && focus.includes(l.to), dim = focus.length && !on;
+      return `<line class="wire ${l.kind} ${on ? 'hl' : ''} ${dim ? 'dim' : ''}" data-l="${i}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/><text class="wlbl ${on ? 'hl' : ''}" data-l="${i}" x="${mx}" y="${my - 5}">${esc(l.label)}</text>`; }).join('');
+    const comps = C.map(c => { const w = c.w || 132, h = c.h || 44;
+      return `<g class="comp ${c.cls || ''} ${focus.includes(c.id) && c.id !== 'fc' ? 'hl' : ''}" data-c="${c.id}" tabindex="0" role="button"><rect x="${c.x - w / 2}" y="${c.y - h / 2}" width="${w}" height="${h}" rx="9"/><text x="${c.x}" y="${c.y}">${esc(c.label)}</text></g>`; }).join('');
+    const html = `<div class="dg"><div class="dg-title">Wiring overview · tap a part</div>
+      <svg viewBox="0 0 640 375" role="img" aria-label="Wiring diagram">${wires}${comps}</svg>
+      <div class="legend"><span><i style="background:var(--danger)"></i>power</span><span><i style="background:var(--info)"></i>control signal</span><span><i style="background:var(--ok)"></i>data</span><span><i style="background:var(--video)"></i>video</span></div>
+      <div class="dg-info" id="${id}-i">${focus.length ? 'Highlighted: the parts for this step. Tap any part for details.' : 'Tap any part to see what it connects to.'}</div></div>`;
+    return { html, mount(root) {
+      const svg = $('svg', root), info = $('#' + id + '-i', root);
+      const show = cid => {
+        const c = byId[cid];
+        $$('.comp', svg).forEach(g => g.classList.toggle('hl', g.dataset.c === cid));
+        $$('[data-l]', svg).forEach(w => { const l = L[w.dataset.l], on = l.from === cid || l.to === cid; w.classList.toggle('hl', on); w.classList.toggle('dim', !on); });
+        const conn = L.filter(l => l.from === cid || l.to === cid).map(l => `${esc(byId[l.from === cid ? l.to : l.from].label)} <span style="color:var(--muted)">(${esc(l.label)})</span>`);
+        info.innerHTML = `<b>${esc(c.label)}</b>: ${inline(c.note || '')}${conn.length ? `<br><small>Connects to: ${conn.join(' · ')}</small>` : ''}`;
+      };
+      $$('.comp', svg).forEach(g => { g.addEventListener('click', () => show(g.dataset.c)); g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); show(g.dataset.c); } }); });
+    } };
+  },
+
+  /* Analog video channel picker. options: recommended:{band,ch}, bands:[keys] */
+  vtx(o) {
+    const id = uid(), keys = o.bands || Object.keys(VTX_BANDS), rec = o.recommended || {};
+    const sel = S.prefs.vtx;
+    const selF = sel ? VTX_BANDS[sel.band].f[sel.ch - 1] : null;
+    const rows = keys.map(k => `<tr><th>${esc(VTX_BANDS[k].name)}</th>${VTX_BANDS[k].f.map((f, i) => {
+      const isSel = sel && sel.band === k && sel.ch === i + 1, isRec = rec.band === k && rec.ch === i + 1, same = !isSel && selF === f;
+      return `<td><button type="button" class="${isSel ? 'sel' : ''} ${isRec ? 'rec' : ''} ${same ? 'same' : ''}" data-b="${k}" data-c="${i + 1}" title="Band ${k} channel ${i + 1}: ${f} MHz">${f}</button></td>`; }).join('')}</tr>`).join('');
+    const read = sel ? `<div><small style="color:var(--muted)">Set BOTH the VTX and goggles to</small><div class="big">${sel.band}${sel.ch} · ${selF} MHz</div></div>` : `<div style="color:var(--muted)">Tap a frequency to choose it.${rec.band ? ` Green outline = recommended (${rec.band}${rec.ch}).` : ''}</div>`;
+    return { html: `<div class="dg vtx" id="${id}"><div class="dg-title">5.8 GHz analog channels (MHz) · rows = band, columns = channel 1–8</div>
+      <table><thead><tr><th></th>${[1, 2, 3, 4, 5, 6, 7, 8].map(n => `<th>CH${n}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
+      <div class="vtx-read">${read}</div>${sel ? '<p style="text-align:center;font-size:13px;color:var(--muted);margin:6px 0 0">Dashed cells are the same frequency in another band: also fine.</p>' : ''}</div>`,
+      mount(root) { $$('button[data-b]', root).forEach(b => b.addEventListener('click', () => { S.prefs.vtx = { band: b.dataset.b, ch: +b.dataset.c }; save(); renderMain(true); })); } };
+  },
+
+  sticks(o) { return { html: widgetBox('sticks', o) }; },
+
+  parts() {
+    return { html: `<div class="dg"><div class="dg-title">What's in the box</div><div class="parts">${(GUIDE.parts || []).map(p => `<div class="part">${p.image ? `<img src="${esc(p.image)}" alt="${esc(p.name)}" data-act="zoom">` : `<div class="ph"><span><b>📦</b>Photo: ${esc(p.name)}</span></div>`}<div class="pt"><span class="q">×${p.qty}</span> ${esc(p.name)}${p.note ? `<small>${inline(p.note)}</small>` : ''}</div></div>`).join('')}</div></div>` };
+  }
+};
+
+/* ---------------------------------------------------------------- validation (editor mode) */
+const ISSUES = [];
+(() => {
+  const seen = new Set();
+  if (!STEPS.length) ISSUES.push('No steps defined.');
+  STEPS.forEach(s => {
+    const where = `Step "${s.title || '?'}" (${s._phase.title})`;
+    if (!s.id) ISSUES.push(`${where} has no id.`); else if (seen.has(s.id)) ISSUES.push(`Duplicate step id "${s.id}".`); else seen.add(s.id);
+    if (s.diagram && !DIAGRAMS[s.diagram.type]) ISSUES.push(`${where}: unknown diagram type "${s.diagram.type}".`);
+    (s.live || []).forEach(w => { if (!WIDGETS[w]) ISSUES.push(`${where}: unknown live panel "${w}".`); });
+    normChecks(s).forEach(c => { if (c.auto && !AUTO[c.auto]) ISSUES.push(`${where}: unknown auto check "${c.auto}".`); });
+    if (!normChecks(s).length) ISSUES.push(`${where} has no checks. Readers can continue without confirming anything.`);
+  });
+  // Pre-render all text so missing glossary terms are collected
+  STEPS.forEach(s => { rich(s.body); rich(s.details); (s.warnings || []).forEach(w => inline(w.text)); normChecks(s).forEach(c => inline(c.text)); (s.troubleshoot || []).forEach(t => rich(t.a)); });
+  MISSING_TERMS.forEach(t => ISSUES.push(`Glossary term [[${t}]] is used but not defined in GUIDE.glossary.`));
+})();
+
+/* ================================================================ RENDER */
+const LOGO = `<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="9" cy="9" r="6"/><circle cx="31" cy="9" r="6"/><circle cx="9" cy="31" r="6"/><circle cx="31" cy="31" r="6"/><path d="M13 13l14 14M27 13L13 27"/><rect x="15" y="15" width="10" height="10" rx="2" fill="currentColor"/></svg>`;
+
+function shell() {
+  document.documentElement.dataset.theme = S.theme;
+  document.title = `${META.title || 'Setup Guide'}${META.drone ? ' · ' + META.drone : ''}`;
+  $('#app').innerHTML = `
+  <header class="top">
+    <button class="icon-btn only-mobile" data-act="nav" aria-label="Show steps">☰</button>
+    <div class="brand"><div class="logo">${LOGO}</div><div><div class="t">${esc(META.title || 'Setup Guide')}</div><div class="s">${esc(META.drone || '')}</div></div></div>
+    <div class="prog"><div class="bar" role="progressbar" aria-label="Overall progress"><i id="progbar"></i></div><span id="progtxt"></span></div>
+    <div class="spacer"></div>
+    <div class="search"><input id="q" type="search" placeholder="Search steps…  ( / )" autocomplete="off" aria-label="Search steps"><div id="qres" class="qres" hidden></div></div>
+    <button class="pill" id="livebtn" data-act="live" title="Connect the drone over USB for live checks"><span class="dot"></span><span class="lbl">Connect drone</span></button>
+    <div class="seg" role="group" aria-label="Detail level"><button data-act="detail" data-v="simple">Simple</button><button data-act="detail" data-v="detailed">Detailed</button></div>
+    <button class="icon-btn" data-act="theme" title="Light / dark" aria-label="Toggle light or dark theme"><svg viewBox="0 0 24 24" width="18" height="18" style="vertical-align:middle"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg></button>
+    <button class="icon-btn" data-act="menu" title="More" aria-label="More options">⋯</button>
+    <div id="menu" class="menu" hidden>
+      <button class="mobile-only" data-act="detail" data-v="${S.detail === 'simple' ? 'detailed' : 'simple'}">${S.detail === 'simple' ? '☰ Show all details' : '☰ Simple view'}</button>
+      <button data-act="print">🖨 Print or save progress report (PDF)</button>
+      <button data-act="live">🔌 Live drone connection</button>
+      <button data-act="export">⬇ Save my progress to a file</button>
+      <button data-act="import">⬆ Load progress from a file</button>
+      <button data-act="reset">↺ Reset my progress</button>
+      <a href="${EDIT ? location.pathname : '?edit'}">${EDIT ? '✕ Leave editor mode' : '✎ Editor mode (for content authors)'}</a>
+    </div>
+  </header>
+  ${META.placeholder ? `<div class="ribbon"><b>Template.</b> This content is a generic example. Replace it with your drone's real materials. <a href="?edit">Editor mode</a></div>` : ''}
+  ${EDIT ? `<div class="editbar"><b>Editor mode.</b> Step ids and ⚑ VERIFY notes are shown. All content lives in the <code>GUIDE</code> object near the top of this file (see AI_EDITING_GUIDE.md).
+    ${ISSUES.length ? `<ul>${ISSUES.map(i => `<li>${esc(i)}</li>`).join('')}</ul>` : ' <span class="good">No content problems found.</span>'}
+    <div style="margin-top:6px">VERIFY notes remaining: <b>${STEPS.filter(s => s.verify).length}</b></div></div>` : ''}
+  <div class="layout"><nav id="side" class="side" aria-label="Steps"></nav><main id="main" class="main" tabindex="-1"></main></div>
+  <div id="pop" class="pop" hidden role="tooltip"></div>
+  <div id="modal" class="modal" hidden></div>`;
+}
+
+function renderSide() {
+  const html = PHASES.map((p, pi) => {
+    const ps = STEPS.filter(s => s._pi === pi), d = ps.filter(s => (S.steps[s.id] || {}).status === 'done').length;
+    return `<div class="phase ${d === ps.length ? 'complete' : ''}"><div class="phase-h"><span class="ic">${d === ps.length ? '✓' : esc(p.icon || pi + 1)}</span><span class="nm">${pi + 1}. ${esc(p.title)}</span><span class="ct">${d}/${ps.length}</span></div>
+      <ul class="steps-l">${ps.map(s => { const x = (S.steps[s.id] || {}).status; return `<li><button data-act="go" data-id="${esc(s.id)}" class="${S.current === s.id ? 'cur' : ''}"><span class="st ${x || ''}">${x === 'done' ? '✓' : x === 'skipped' ? '↷' : S.current === s.id ? '›' : '○'}</span><span>${esc(s.title)}</span></button></li>`; }).join('')}</ul></div>`;
+  }).join('') + `<div class="phase"><div class="steps-l" style="border:0"><button data-act="go" data-id="__done" class="${S.current === '__done' ? 'cur' : ''}"><span class="st">🏁</span><span>Finish & report</span></button></div></div>`;
+  $('#side').innerHTML = html;
+}
+function updateTop() {
+  const d = doneCount(), pct = STEPS.length ? Math.round(d / STEPS.length * 100) : 0;
+  $('#progbar').style.width = pct + '%'; $('#progtxt').textContent = `${d}/${STEPS.length} · ${pct}%`;
+  $$('.seg button').forEach(b => b.classList.toggle('on', b.dataset.v === S.detail));
+}
+
+function stepHTML(s) {
+  const p = s._phase, gated = s.gate && !S.acks[s.id];
+  let h = `<div class="crumbs">Phase ${s._pi + 1}/${PHASES.length} · ${esc(p.title)} · Step ${s._si + 1}/${p.steps.length}</div>`;
+  if (s._si === 0 && p.summary) h += `<div class="phase-intro"><span class="pi">${esc(p.icon || '')}</span><div>${rich(p.summary)}</div></div>`;
+  h += `<h1>${esc(s.title)}</h1><div class="meta">${s.time ? `<span>⏱ ${esc(s.time)}</span>` : ''}${s.level ? `<span class="lvl ${esc(s.level)}">${esc(s.level)}</span>` : ''}${EDIT ? `<span class="eid">#${esc(s.id)}</span>` : ''}</div>`;
+  if (EDIT && s.verify) h += `<div class="verify">⚑ <b>VERIFY:</b> ${inline(s.verify)}</div>`;
+  if (gated) {
+    return h + `<div class="gate"><h2>⚠ ${esc(s.gate.title || 'Before you continue')}</h2><div class="content">${rich(s.gate.text)}</div>
+      <label class="chk" id="gatechk"><input type="checkbox" data-act="gatebox"><span class="box"></span><span class="txt">${inline(s.gate.confirm || 'I understand')}</span></label>
+      <button class="btn primary" data-act="ack" id="ackbtn" disabled>Continue to this step</button></div>${footHTML(s)}`;
+  }
+  const order = { danger: 0, caution: 1, info: 2, tip: 3 }, icons = { danger: '⛔', caution: '⚠️', info: 'ℹ️', tip: '💡' }, names = { danger: 'Danger', caution: 'Caution', info: 'Note', tip: 'Tip' };
+  (s.warnings || []).slice().sort((a, b) => (order[a.level] ?? 9) - (order[b.level] ?? 9)).forEach(w => {
+    const lv = order[w.level] !== undefined ? w.level : 'info';
+    h += `<div class="alert ${lv}" role="${lv === 'danger' ? 'alert' : 'note'}"><span class="ai">${icons[lv]}</span><div><b class="lv">${names[lv]}</b>${rich(w.text)}</div></div>`;
+  });
+  if (s.media && s.media.length) h += `<div class="media">${s.media.map(mediaHTML).join('')}</div>`;
+  h += `<div class="content">${rich(s.body)}</div>`;
+  if (s.diagram && DIAGRAMS[s.diagram.type]) { const d = DIAGRAMS[s.diagram.type](s.diagram); h += `<div class="dg-wrap">${d.html}</div>`; mountQueue.push(d.mount); }
+  (s.live || []).forEach(w => h += widgetBox(w, {}));
+  if (s.details) h += `<details class="more" ${S.detail === 'detailed' ? 'open' : ''}><summary>More detail</summary><div class="content">${rich(s.details)}</div></details>`;
+  const checks = normChecks(s);
+  if (checks.length) h += `<div class="sec-h">✔ Confirm before moving on</div><ul class="checks" id="checks"></ul>`;
+  if (s.troubleshoot && s.troubleshoot.length) h += `<div class="sec-h">🛟 Stuck?</div><div class="trouble">${s.troubleshoot.map(t => `<details><summary>${inline(t.q)}</summary><div class="content">${rich(t.a)}</div></details>`).join('')}</div>`;
+  if (s.links && s.links.length) h += `<div class="sec-h">🔗 Links</div><div class="links">${s.links.map(l => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)} ↗</a>`).join('')}</div>`;
+  h += `<div class="sec-h">📝 My notes</div><textarea class="note-in" data-act="note" placeholder="Anything worth remembering. Notes appear in your printed report.">${esc(st(s.id).note || '')}</textarea>`;
+  return h + footHTML(s);
+}
+function mediaHTML(m) {
+  const cap = m.caption ? `<figcaption>${inline(m.caption)}</figcaption>` : '';
+  if (!m.src) return `<figure><div class="ph"><span><b>${m.type === 'video' ? '🎬' : '📷'}</b>${esc(m.type === 'video' ? 'Video' : 'Photo')} goes here${m.caption ? ':<br>' + esc(m.caption) : ''}</span></div></figure>`;
+  if (m.type === 'video') {
+    const yt = m.src.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{6,})/);
+    if (yt) return `<figure><iframe src="https://www.youtube-nocookie.com/embed/${yt[1]}" title="${esc(m.caption || 'video')}" allowfullscreen loading="lazy"></iframe>${cap}</figure>`;
+    return `<figure><video src="${esc(m.src)}" controls preload="metadata"></video>${cap}</figure>`;
+  }
+  return `<figure><img src="${esc(m.src)}" alt="${esc(m.alt || m.caption || '')}" loading="lazy" data-act="zoom">${cap}</figure>`;
+}
+function footHTML(s) {
+  return `<div class="foot"><button class="btn" data-act="prev" ${s._idx === 0 ? 'disabled' : ''}>← Back</button><div class="grow"></div>
+    ${SET.allowSkip && !(s.gate && !S.acks[s.id]) ? `<button class="btn link" data-act="skip">Skip for now</button>` : ''}<button class="btn primary" data-act="next" id="nextbtn"></button></div>`;
+}
+function renderChecks(s) {
+  const ul = $('#checks'); if (!ul) return;
+  ul.innerHTML = normChecks(s).map(c => { const on = isTicked(s, c);
+    return `<li><label class="chk ${on ? 'on' : ''}"><input type="checkbox" data-act="check" data-c="${esc(c.key)}" ${on ? 'checked' : ''}><span class="box"></span><span class="txt">${inline(c.text)}${c.auto ? ` <span class="badge live" title="Ticks itself when a drone is connected over USB">LIVE</span>` : ''}</span></label></li>`; }).join('');
+}
+function updateFoot(s) {
+  const b = $('#nextbtn'); if (!b) return;
+  const left = remaining(s), last = s._idx === STEPS.length - 1, gated = s.gate && !S.acks[s.id];
+  const locked = gated || (SET.requireChecks && left > 0);
+  b.disabled = locked;
+  b.textContent = gated ? 'Confirm the safety notice first' : locked ? `Tick ${left} more box${left > 1 ? 'es' : ''} to continue` : last ? 'Finish 🏁' : (left ? 'Next step →' : 'Done. Next step →');
+}
+
+let mountQueue = [];
+function renderMain(keepScroll) {
+  const main = $('#main'), y = window.scrollY; mountQueue = [];
+  if (S.current === '__done') main.innerHTML = doneHTML();
+  else {
+    const s = IDX[S.current] || STEPS[0]; S.current = s.id;
+    main.innerHTML = stepHTML(s);
+    mountQueue.forEach(fn => { if (fn) fn(main); });
+    renderChecks(s); updateFoot(s);
+  }
+  updateLive();
+  if (keepScroll) window.scrollTo(0, y); else { window.scrollTo(0, 0); main.focus({ preventScroll: true }); }
+}
+function doneHTML() {
+  const d = doneCount(), skipped = STEPS.filter(s => (S.steps[s.id] || {}).status === 'skipped'), todo = STEPS.filter(s => !(S.steps[s.id] || {}).status || S.steps[s.id].status === 'todo');
+  const all = d === STEPS.length;
+  return `<div class="done-hero"><div class="big">${all ? '🏁' : '📋'}</div><h1>${all ? 'Setup complete!' : 'Almost there'}</h1>
+    <p style="color:var(--muted)">${d} of ${STEPS.length} steps done${skipped.length ? ` · ${skipped.length} skipped` : ''}${todo.length ? ` · ${todo.length} not started` : ''}.</p></div>
+    ${skipped.length || todo.length ? `<div class="card"><b>Still to do</b><ul>${[...skipped, ...todo].map(s => `<li><a href="#${esc(s.id)}" data-act="go" data-id="${esc(s.id)}">${esc(s._phase.title)} → ${esc(s.title)}</a>${(S.steps[s.id] || {}).status === 'skipped' ? ' <span class="meh">(skipped)</span>' : ''}</li>`).join('')}</ul></div>` : ''}
+    <div class="card"><b>Your report</b><p style="color:var(--muted);margin:4px 0 0">Fill these in, then print or save as PDF. The report lists every step, when you finished it, and your notes.</p>
+    <div class="fields"><label>Your name<input data-act="builder" data-k="name" value="${esc(S.builder.name)}" placeholder="Name"></label><label>Drone ID / serial<input data-act="builder" data-k="drone" value="${esc(S.builder.drone)}" placeholder="e.g. SN-0042"></label></div>
+    <button class="btn primary" data-act="print">🖨 Print / save report as PDF</button></div>
+    ${all ? `<div class="alert tip"><span class="ai">💡</span><div><p>Fly safe. Run the <a href="#preflight" data-act="go" data-id="preflight">pre-flight checklist</a> before every flight.</p></div></div>` : ''}`;
+}
+function render() { renderSide(); updateTop(); renderMain(); }
+
+/* ---------------------------------------------------------------- navigation */
+function go(id, keepScroll) {
+  if (id !== '__done' && !IDX[id]) return;
+  S.current = id; save(); document.body.classList.remove('nav-open');
+  history.replaceState(null, '', '#' + id);
+  renderSide(); updateTop(); renderMain(keepScroll);
+}
+function next() {
+  const s = IDX[S.current]; if (!s) return;
+  if (SET.requireChecks && remaining(s) > 0) return;
+  const x = st(s.id); x.status = 'done'; x.at = new Date().toISOString(); save();
+  go(s._idx < STEPS.length - 1 ? STEPS[s._idx + 1].id : '__done');
+}
+
+/* ---------------------------------------------------------------- modals */
+function modal(html) { const m = $('#modal'); m.innerHTML = `<div class="box">${html}</div>`; m.hidden = false; }
+function closeModal() { const m = $('#modal'); m.hidden = true; m.innerHTML = ''; }
+function openLive() {
+  modal(`<div class="live-modal"><button class="icon-btn x" data-act="close" aria-label="Close">✕</button><h2>🔌 Live drone connection</h2>
+    <p style="color:var(--muted);margin-top:4px">Reads data from the flight controller over USB to check your setup steps. It <b>only listens</b> and never changes settings.</p>
+    <ol style="font-size:14px;color:var(--muted)"><li>Plug the flight controller into this computer with a USB data cable.</li><li><b>Close QGroundControl</b>. Only one app can use the port.</li><li>Click <b>Connect drone</b> and pick the device (often "PX4", "FMU" or a board name).</li></ol>
+    ${widgetBox('link')}${widgetBox('heartbeat')}${widgetBox('battery')}${widgetBox('gps')}${widgetBox('messages')}
+    <p class="note" style="font-size:13px;color:var(--muted)">Works in Chrome and Edge on desktop (Web Serial). Demo mode shows simulated data so you can see what to expect; it never ticks boxes for you.</p></div>`);
+  updateLive();
+}
+function showTerm(btn) {
+  const g = GLOSS[btn.dataset.term], pop = $('#pop'); if (!g) return;
+  pop.innerHTML = `<b>${esc(g.term)}</b>${esc(g.def)}`; pop.hidden = false;
+  const r = btn.getBoundingClientRect(), w = Math.min(320, window.innerWidth - 20);
+  pop.style.maxWidth = w + 'px';
+  pop.style.left = clamp(r.left + window.scrollX, 10, window.scrollX + window.innerWidth - w - 10) + 'px';
+  pop.style.top = (r.bottom + window.scrollY + 8) + 'px';
+}
+
+/* ---------------------------------------------------------------- report */
+function buildReport() {
+  const d = doneCount(), now = new Date();
+  const label = x => x === 'done' ? '✓ Done' : x === 'skipped' ? '↷ Skipped' : '—';
+  $('#report').innerHTML = `
+    <h1>${esc(META.title || 'Setup Guide')}: Setup Report</h1>
+    <div class="sub">${esc(META.drone || '')} · ${esc(META.organization || '')} · Guide v${esc(META.version || '?')} (${esc(META.updated || '')})</div>
+    ${d === STEPS.length ? `<div class="cert"><h2>Certificate of Completion</h2><p>This confirms that <b>${esc(S.builder.name || '________________')}</b> completed all ${STEPS.length} setup steps for drone <b>${esc(S.builder.drone || '__________')}</b> on ${now.toLocaleDateString()}.</p></div>` : ''}
+    <table><tr><th>Builder</th><td>${esc(S.builder.name || '')}</td><th>Drone ID</th><td>${esc(S.builder.drone || '')}</td></tr>
+      <tr><th>Started</th><td>${fmtTime(S.started)}</td><th>Printed</th><td>${fmtTime(now.toISOString())}</td></tr>
+      <tr><th>Progress</th><td>${d} / ${STEPS.length} steps</td><th>Live link</th><td>${S.liveSeen ? `${esc(S.liveSeen.autopilot)} · ${esc(S.liveSeen.type)} (first seen ${fmtTime(S.liveSeen.at)})` : 'Not used'}</td></tr>
+      <tr><th>Video channel</th><td>${S.prefs.vtx ? esc(tokens('{{vtx}}')) : '—'}</td><th>Safety notices</th><td>${Object.keys(S.acks).length} acknowledged</td></tr></table>
+    <table><thead><tr><th class="w-n">#</th><th class="w-p">Phase</th><th class="w-s">Step</th><th class="w-st">Status</th><th class="w-c">Completed</th><th>Notes</th></tr></thead><tbody>
+    ${STEPS.map(s => { const x = S.steps[s.id] || {}; return `<tr><td>${s._pi + 1}.${s._si + 1}</td><td>${esc(s._phase.title)}</td><td>${esc(s.title)}</td><td>${label(x.status)}</td><td>${x.at ? fmtTime(x.at) : ''}</td><td>${esc(x.note || '')}</td></tr>`; }).join('')}</tbody></table>
+    <div class="sign"><div>Builder signature / date</div><div>Reviewer / instructor signature / date</div></div>`;
+}
+window.addEventListener('beforeprint', buildReport);
+
+/* ---------------------------------------------------------------- search */
+const SEARCH = STEPS.map(s => ({ s, text: [s.title, flat(s.body), flat(s.details), flat(s.troubleshoot), flat(s.checks), s._phase.title].join(' ').toLowerCase() }));
+function doSearch(q) {
+  const box = $('#qres'); q = q.trim().toLowerCase();
+  if (!q) { box.hidden = true; return; }
+  const terms = q.split(/\s+/), hits = SEARCH.filter(x => terms.every(t => x.text.includes(t))).slice(0, 8);
+  box.innerHTML = hits.length ? hits.map(x => `<button data-act="go" data-id="${esc(x.s.id)}">${esc(x.s.title)}<small>${esc(x.s._phase.title)}</small></button>`).join('') : '<button disabled>No matching steps</button>';
+  box.hidden = false;
+}
+
+/* ---------------------------------------------------------------- events */
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]');
+  if (!e.target.closest('.term')) $('#pop').hidden = true;
+  if (!e.target.closest('#menu') && !e.target.closest('[data-act="menu"]')) $('#menu').hidden = true;
+  if (!e.target.closest('.search')) $('#qres').hidden = true;
+  if (e.target.id === 'modal') closeModal();
+  if (!t) return;
+  const act = t.dataset.act, s = IDX[S.current];
+  switch (act) {
+    case 'go': e.preventDefault(); $('#q').value = ''; go(t.dataset.id); break;
+    case 'next': next(); break;
+    case 'prev': if (s && s._idx > 0) go(STEPS[s._idx - 1].id); break;
+    case 'skip': if (s) { const x = st(s.id); if (x.status !== 'done') x.status = 'skipped'; save(); go(s._idx < STEPS.length - 1 ? STEPS[s._idx + 1].id : '__done'); } break;
+    case 'ack': if (s) { S.acks[s.id] = new Date().toISOString(); save(); renderMain(true); } break;
+    case 'detail': S.detail = t.dataset.v; save(); shell(); render(); break;
+    case 'theme': S.theme = S.theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = S.theme; save(); break;
+    case 'menu': $('#menu').hidden = !$('#menu').hidden; break;
+    case 'nav': document.body.classList.toggle('nav-open'); break;
+    case 'live': $('#menu').hidden = true; openLive(); break;
+    case 'connect': connectSerial(); break;
+    case 'demo': startDemo(); break;
+    case 'disconnect': disconnect(); break;
+    case 'close': closeModal(); break;
+    case 'term': e.preventDefault(); showTerm(t); break;
+    case 'zoom': modal(`<div style="text-align:center"><img src="${esc(t.getAttribute('src'))}" alt=""></div>`); $('#modal .box').style.width = 'auto'; break;
+    case 'print': $('#menu').hidden = true; buildReport(); window.print(); break;
+    case 'reset': if (confirm('Erase all progress, ticks and notes for this guide on this device?')) { localStorage.removeItem(KEY); S = defaults(); shell(); render(); } break;
+    case 'export': {
+      const blob = new Blob([JSON.stringify({ guide: META.id, version: META.version, state: S }, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${META.id || 'guide'}-progress.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); break;
+    }
+    case 'import': {
+      const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json';
+      inp.onchange = () => { const f = inp.files[0]; if (!f) return; f.text().then(txt => { try { const j = JSON.parse(txt); if (j.guide && j.guide !== META.id && !confirm('This file is from a different guide. Load anyway?')) return; S = Object.assign(defaults(), j.state || j); save(); shell(); render(); } catch (err) { alert('That file could not be read.'); } }); };
+      inp.click(); break;
+    }
+  }
+});
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.dataset.act === 'check') {
+    const s = IDX[S.current]; if (!s) return; const x = st(s.id);
+    x.checks[t.dataset.c] = t.checked; if (!t.checked && x.status === 'done') { x.status = 'todo'; renderSide(); updateTop(); }
+    t.closest('.chk').classList.toggle('on', t.checked); save(); updateFoot(s);
+  } else if (t.dataset.act === 'gatebox') {
+    t.closest('.chk').classList.toggle('on', t.checked); $('#ackbtn').disabled = !t.checked;
+  }
+});
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.dataset.act === 'note') { st(S.current).note = t.value; save(); }
+  else if (t.dataset.act === 'builder') { S.builder[t.dataset.k] = t.value; save(); }
+  else if (t.id === 'q') doSearch(t.value);
+});
+document.addEventListener('keydown', e => {
+  const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+  if (e.key === 'Escape') { closeModal(); $('#pop').hidden = true; $('#menu').hidden = true; $('#qres').hidden = true; document.body.classList.remove('nav-open'); }
+  if (typing) { if (e.key === 'Enter' && e.target.id === 'q') { const b = $('#qres button[data-id]'); if (b) b.click(); } return; }
+  if (e.key === '/') { e.preventDefault(); const q = $('#q'); if (q && q.offsetParent) q.focus(); }
+});
+window.addEventListener('hashchange', () => { const id = decodeURIComponent(location.hash.slice(1)); if (id && id !== S.current && (IDX[id] || id === '__done')) go(id); });
+
+/* ---------------------------------------------------------------- boot */
+const hashId = decodeURIComponent(location.hash.slice(1));
+if (hashId && (IDX[hashId] || hashId === '__done')) S.current = hashId;
+if (!IDX[S.current] && S.current !== '__done') S.current = STEPS[0] && STEPS[0].id;
+shell(); render();
+if (EDIT && ISSUES.length) console.warn('[guide] content issues:\n' + ISSUES.join('\n'));
+
+/* small debug/test hook */
+window.DroneGuide = { GUIDE, STEPS, state: () => S, live: LIVE, feed, crcAcc, issues: ISSUES, startDemo, disconnect };
+})();
+</script>
+</body>
+</html>
