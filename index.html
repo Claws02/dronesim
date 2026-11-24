@@ -241,7 +241,27 @@ svg .wlbl.hl{fill:var(--text)}
 .vtx-read{display:flex;gap:16px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:12px}
 .vtx-read .big{font:700 30px var(--mono);color:var(--accent)}
 .parts{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
-.part{background:var(--panel2);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:13.5px}
+.part{background:var(--panel2);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:13.5px;position:relative}
+.part.pick{transition:border-color .15s,box-shadow .15s}
+.part .pbtn{display:block;width:100%;padding:0;border:0;background:none;text-align:left;cursor:pointer;color:inherit}
+.part .pimg{display:block;position:relative}
+.part .pbadge{position:absolute;left:8px;bottom:8px;font:600 11px var(--mono);padding:2px 8px;border-radius:99px;background:rgba(0,0,0,.6);color:#fff}
+.part:not(.pick) .pbadge{display:none}
+.part.pick:hover{border-color:var(--line2)}
+.part.on{border-color:var(--ok);box-shadow:0 0 0 2px color-mix(in srgb,var(--ok) 40%,transparent)}
+.part.on .pbadge{background:var(--ok)}
+.part.on .pimg::after{content:'✓';position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;background:var(--ok);color:#fff;display:grid;place-items:center;font-weight:700;font-size:17px}
+.part.miss{border-color:var(--danger)}
+.part.miss .pbadge{background:var(--danger)}
+.part.miss .pimg{opacity:.55}
+.part .pmiss{position:absolute;top:6px;left:6px;font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid var(--line2);background:var(--panel);color:var(--muted);cursor:pointer;opacity:.9}
+.part.miss .pmiss{color:var(--danger);border-color:var(--danger)}
+.pgroup{font:600 12px var(--mono);letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin:14px 0 8px}
+.copybox{background:var(--panel);border:1px solid var(--line2);border-radius:var(--radius);padding:14px 16px;margin:14px 0}
+.cb-h{display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap}
+.cb-fields{margin:12px 0}
+.cb-fields select{height:40px;padding:0 10px;border-radius:8px;border:1px solid var(--line2);background:var(--panel);color:var(--text);font:15px var(--sans)}
+.cb-text{white-space:pre-wrap;font-size:12.5px;max-height:320px;margin:0}
 .part .ph,.part img{aspect-ratio:4/3;width:100%;object-fit:cover;display:grid}
 .part .pt{padding:8px 10px}
 .part .q{font:600 12px var(--mono);color:var(--accent)}
@@ -361,7 +381,11 @@ const GUIDE = {
     allowSkip: true,                 // show "Skip for now" (skipped steps are flagged in the report)
     stickMode: 2,                    // 1 or 2 — which stick does throttle (Mode 2 = left)
     rcMap: { roll: 1, pitch: 2, throttle: 3, yaw: 4 },  // RC channel order (AETR)
-    cells: 4                         // LiPo cell count, used for per-cell voltage readouts
+    cells: 4,                        // LiPo cell count, used for per-cell voltage readouts
+    // 3D assembly animations (diagram type "assembly3d"). Loaded only when a step needs them.
+    // Files are relative to index.html. Offline model wrappers come from tools/glb-to-js.mjs or Assembly Studio.
+    models: ["models/placeholder-quad.js"],
+    partGroups: { part: "Drone parts", tool: "Tools (included in the box)" }
   },
 
   // ───────────────────────── PARTS LIST ─────────────────────────
@@ -383,7 +407,13 @@ const GUIDE = {
     { id: "charger", name: "LiPo balance charger",        qty: 1, image: "", note: "" },
     { id: "strap",   name: "Battery strap + grip pad",    qty: 1, image: "", note: "" },
     { id: "usb",     name: "USB data cable",              qty: 1, image: "", note: "Must carry data, not just charge." },
-    { id: "hw",      name: "Hardware bag (screws, zip ties, heat-shrink, foam tape)", qty: 1, image: "", note: "" }
+    { id: "hw",      name: "Hardware bag (screws, zip ties, heat-shrink, foam tape)", qty: 1, image: "", note: "" },
+    // group: "tool" puts the item under "Tools (included in the box)"
+    { id: "hex",     group: "tool", name: "Hex driver set (1.5 / 2.0 / 2.5 mm)", qty: 1, image: "", note: "" },
+    { id: "meter",   group: "tool", name: "Multimeter",                  qty: 1, image: "", note: "For checking for short circuits." },
+    { id: "cutters", group: "tool", name: "Side cutters",                qty: 1, image: "", note: "" },
+    { id: "iron",    group: "tool", name: "Soldering iron + solder",     qty: 1, image: "", note: "" },
+    { id: "smoke",   group: "tool", name: "Smoke stopper",               qty: 1, image: "", note: "Protects the electronics on first power-up." }
   ],
 
   // ───────────────────────── GLOSSARY ─────────────────────────
@@ -486,37 +516,71 @@ const GUIDE = {
           ]
         },
         {
-          id: "parts", title: "Check your parts", time: "10 min", level: "easy",
-          body: "Lay everything out on a clear table. Tick each item as you find it.",
+          id: "parts", title: "Check what's in the box", time: "10 min", level: "easy",
+          body: [
+            "Lay everything out on a clear table. All the tools you need are in the box too.",
+            "**Tap each photo when you find that item.** If something isn't there, tap **Missing?** on it."
+          ],
           diagram: { type: "parts" },
           checklistFrom: "parts",
+          verify: "Replace with the kit's real packing list and a photo of every item (image paths).",
           troubleshoot: [
             { q: "Something is missing", a: "Stop here and contact {{support}} before you build. Missing small hardware is often in a bag taped inside the frame box." }
           ]
         },
         {
-          id: "tools", title: "Gather tools and install software", time: "15 min", level: "easy",
+          id: "qgc-install", title: "Request QGroundControl from IT", time: "5 min + IT wait", level: "easy",
           body: [
-            {h: "Tools"},
-            [
-              "Hex drivers (usually 1.5, 2.0 and 2.5 mm)",
-              "Soldering iron and solder, if your kit needs soldering",
-              "Multimeter (for checking for short circuits)",
-              "Side cutters, zip ties, double-sided foam tape",
-              "Optional but recommended: a [[smoke stopper]]"
-            ],
-            {h: "Software"},
-            "Install **[[QGroundControl]]** on your computer now (Windows, macOS or Linux). You'll use it in Phase 3.",
-            "Start charging your flight batteries with the balance charger."
+            "You'll need **[[QGroundControl]]** on your computer in Phase 3. Company computers are managed by IT, so **ask IT to install it**.",
+            {ol: [
+              "Fill in the boxes below. The ticket text updates as you type.",
+              "Press **Copy ticket**.",
+              "Paste it into a new IT ticket and submit it **today**. Approval can take a few days."
+            ]},
+            {copy: {
+              id: "qgc-ticket",
+              label: "IT ticket: QGroundControl install",
+              fields: [
+                { key: "name",    label: "Your name" },
+                { key: "team",    label: "Team / department" },
+                { key: "asset",   label: "Computer asset tag or name" },
+                { key: "os",      label: "Operating system", options: ["Windows", "macOS", "Linux"] },
+                { key: "manager", label: "Manager / approver" },
+                { key: "date",    label: "Needed by (date)" }
+              ],
+              text: [
+                "Subject: Software install request: QGroundControl (drone setup software)",
+                "",
+                "Requester: {{f.name}}",
+                "Team / department: {{f.team}}",
+                "Computer: {{f.asset}} ({{f.os}})",
+                "Manager / approver: {{f.manager}}",
+                "Needed by: {{f.date}}",
+                "",
+                "SOFTWARE REQUESTED",
+                "- Name: QGroundControl (QGC), latest stable release",
+                "- Publisher: Dronecode Project (open source)",
+                "- License: open source (Apache 2.0 / GPLv3), no cost",
+                "- Official download: https://docs.qgroundcontrol.com/master/en/qgc-user-guide/getting_started/download_and_install.html",
+                "",
+                "BUSINESS JUSTIFICATION",
+                "Needed to install firmware on, configure and calibrate the {{drone}} drone (PX4 flight controller) as part of its setup procedure.",
+                "",
+                "TECHNICAL NOTES FOR IT",
+                "- Connects to the drone's flight controller over USB (shows up as a USB serial / COM port). The user needs access to USB serial devices.",
+                "- Uses the internet to download PX4 firmware and optional map tiles.",
+                "- Windows: no extra driver is normally needed for PX4 boards.",
+                "- Linux: the user must be in the 'dialout' group, and ModemManager should be removed (it interferes with the serial port)."
+              ]
+            }},
+            "While you wait for IT: put your flight batteries on the balance charger."
           ],
-          links: [
-            { label: "Download QGroundControl", url: "https://docs.qgroundcontrol.com/master/en/qgc-user-guide/getting_started/download_and_install.html" },
-            { label: "PX4 documentation", url: "https://docs.px4.io/main/en/" }
-          ],
-          verify: "Confirm the QGC download link and the exact hex sizes for this kit.",
+          details: "Already have admin rights and your company allows it? You can install QGroundControl yourself from the official download page linked below.",
+          links: [{ label: "QGroundControl download & install", url: "https://docs.qgroundcontrol.com/master/en/qgc-user-guide/getting_started/download_and_install.html" }],
+          verify: "IT TICKET: rewrite for this organisation. Use its ticket system's required fields, the IT contact or portal, whether QGC is in the approved software catalogue, and the asset-tag format. Keep it copy/paste friendly. Re-check the license and download URL.",
           checks: [
-            "I have the tools listed above",
-            "QGroundControl is installed",
+            "I submitted the IT ticket",
+            "QGroundControl is installed and opens on my computer",
             "Batteries are charging (balance mode, correct cell count)"
           ]
         }
@@ -531,6 +595,14 @@ const GUIDE = {
         {
           id: "frame", title: "Assemble the frame", time: "20 min", level: "easy",
           media: [{ type: "image", src: "", caption: "Frame fully assembled, top view" }],
+          diagram: { type: "assembly3d", model: "placeholder-quad",
+            show: ["frame_*", "arm_*", "standoff_*"],
+            steps: [
+              { label: "Lay the bottom plate flat", parts: "frame_bottom", from: "down", distance: 40 },
+              { label: "Slide the four arms into place", parts: "arm_*", from: "out", stagger: 0.15 },
+              { label: "Screw in the standoffs", parts: "standoff_*", from: "up", distance: 50, spin: { axis: "y", turns: 2 }, stagger: 0.1 },
+              { label: "Add the top plate", parts: "frame_top", from: "up", distance: 60 }
+            ] },
           body: {ol: [
             "Find the bottom plate and the four arms.",
             "Attach the arms to the bottom plate with the supplied screws. Don't fully tighten them yet.",
@@ -549,7 +621,16 @@ const GUIDE = {
             "Mount one motor at the end of each arm, with the wires pointing toward the centre of the frame.",
             "Motor positions are numbered. This is how [[PX4]] numbers them on a quad in an X layout. You'll use these numbers later:"
           ],
-          diagram: { type: "quadX", mode: "motors" },
+          diagrams: [
+            { type: "assembly3d", model: "placeholder-quad",
+              show: ["frame_*", "arm_*", "standoff_*"],
+              labels: { motor1: "Motor 1", motor2: "Motor 2", motor3: "Motor 3", motor4: "Motor 4" },
+              steps: [
+                { label: "Motor 1 goes on the front-right arm", parts: "motor1", from: "up", rotate: [0, 90, 0], callout: true },
+                { label: "Then motors 2, 3 and 4", parts: ["motor2", "motor3", "motor4"], from: "up", rotate: [0, 90, 0], stagger: 0.4, callout: true }
+              ] },
+            { type: "quadX", mode: "motors" }
+          ],
           details: "Don't worry about which way each motor spins yet. You'll check and fix direction in software in Phase 7.",
           checks: ["All four motors are mounted with wires toward the centre", "No screw touches the motor windings", "Each motor spins freely by hand"]
         },
@@ -566,7 +647,15 @@ const GUIDE = {
             "Connect the [[power module]] between the battery lead ([[XT60]]) and the ESC power input.",
             "Insulate every joint with heat-shrink."
           ]},
-          diagram: { type: "wiring", focus: ["bat", "pm", "esc", "motors"] },
+          diagrams: [
+            { type: "assembly3d", model: "placeholder-quad",
+              show: ["frame_bottom", "arm_*", "motor*"],
+              steps: [
+                { label: "ESC drops into the centre of the frame", parts: "esc", from: "up" },
+                { label: "Power module goes at the back", parts: "pm", from: "back", distance: 60 }
+              ] },
+            { type: "wiring", focus: ["bat", "pm", "esc", "motors"] }
+          ],
           details: [
             "Solder at a hot iron temperature (about 350–400 °C) so joints flow quickly and shiny. A dull, grainy joint is a *cold joint* and may fail in flight.",
             {note: "If your ESC supports [[DShot]], you can reverse motor direction in software later instead of re-soldering."}
@@ -582,7 +671,15 @@ const GUIDE = {
             "Plug the ESC signal cable into the FC's motor outputs (often labelled MAIN or FMU OUT 1–4).",
             "Plug the power module cable into the **POWER** port."
           ]},
-          diagram: { type: "wiring", focus: ["fc", "esc", "pm"] },
+          diagrams: [
+            { type: "assembly3d", model: "placeholder-quad",
+              show: ["frame_bottom", "arm_*", "motor*", "esc", "pm", "standoff_*"],
+              steps: [
+                { label: "Lower the flight controller onto the stack", parts: "fc", from: "up", rotate: [0, 90, 0], camera: { focus: "fc", zoom: 1.6 } },
+                { label: "The arrow must point to the front", action: "highlight", parts: "fc_arrow", callout: "FRONT" }
+              ] },
+            { type: "wiring", focus: ["fc", "esc", "pm"] }
+          ],
           details: "If the board has to be mounted rotated (for example to reach the USB port), that's fine. You'll tell PX4 the rotation during sensor setup in Phase 4.",
           verify: "Confirm the output port name (MAIN vs. FMU vs. AUX) for this flight controller.",
           checks: ["Arrow on the FC points forward (or I've noted its rotation)", "ESC signal cable is plugged into the motor outputs", "Power module is plugged into POWER"]
@@ -593,7 +690,16 @@ const GUIDE = {
             "Mount the GPS on its mast, **arrow pointing forward**, and plug it into the **GPS** port.",
             "Keep it as far as possible from power wires, the ESC and the video transmitter. They interfere with the [[compass]]."
           ],
-          diagram: { type: "wiring", focus: ["gps", "fc"] },
+          diagrams: [
+            { type: "assembly3d", model: "placeholder-quad",
+              show: ["frame_*", "arm_*", "motor*", "esc", "pm", "standoff_*", "fc"],
+              steps: [
+                { label: "Fit the GPS mast at the back", parts: "gps_mast", from: "up", distance: 50 },
+                { label: "Mount the GPS on top, arrow forward", parts: "gps", from: "up", distance: 40, rotate: [0, 90, 0] },
+                { label: "Arrow points forward", action: "highlight", parts: "gps_arrow", callout: "FRONT" }
+              ] },
+            { type: "wiring", focus: ["gps", "fc"] }
+          ],
           checks: ["GPS arrow points forward", "GPS is plugged into the GPS port", "GPS is away from power wires and the VTX"]
         },
         {
@@ -610,7 +716,15 @@ const GUIDE = {
             "**TX goes to RX and RX goes to TX.** Crossing the wires is the most common mistake.",
             "Route the antenna away from carbon fibre and motor wires, ideally pointing down or out the back."
           ],
-          diagram: { type: "wiring", focus: ["rx", "fc"] },
+          diagrams: [
+            { type: "assembly3d", model: "placeholder-quad",
+              show: ["frame_*", "arm_*", "motor*", "esc", "pm", "standoff_*", "fc"],
+              steps: [
+                { label: "Slide the receiver in from the side", parts: "rx", from: [-110, 0, 0], path: [[-60, 0, 0]], camera: { focus: "rx", zoom: 1.5 } },
+                { label: "Route the antenna out the back", parts: "rx_antenna", from: "back", distance: 50 }
+              ] },
+            { type: "wiring", focus: ["rx", "fc"] }
+          ],
           details: "Write down which port you used (for example TELEM2). You need it in Phase 5 when you tell PX4 where the receiver is.",
           verify: "Name the exact FC port this kit uses for the receiver, and check that the receiver's voltage is 5 V.",
           checks: ["Receiver TX goes to FC RX and RX goes to TX", "I wrote down the port name", "Antenna is mounted away from carbon fibre and wires"]
@@ -626,7 +740,16 @@ const GUIDE = {
             "Power the VTX from the pad or voltage its label specifies. Some VTXs need 5 V and some can take battery voltage.",
             "Mount the VTX antenna pointing up or back, clear of props."
           ]},
-          diagram: { type: "wiring", focus: ["cam", "vtx", "esc"] },
+          diagrams: [
+            { type: "assembly3d", model: "placeholder-quad",
+              show: ["frame_*", "arm_*", "motor*", "esc", "pm", "standoff_*", "fc", "gps*", "rx*"],
+              steps: [
+                { label: "Antenna first: screw it onto the VTX", parts: "vtx_antenna", from: "up", distance: 50, spin: { axis: "y", turns: 3 } },
+                { label: "Mount the VTX under the top plate", parts: "vtx", from: "back", distance: 70 },
+                { label: "Camera goes at the front, tilted up", parts: "camera", from: "front", distance: 60 }
+              ] },
+            { type: "wiring", focus: ["cam", "vtx", "esc"] }
+          ],
           verify: "Confirm the VTX input voltage range and power source for this kit.",
           checks: ["VTX antenna is attached", "Camera video goes into VTX video in", "VTX is powered from the correct voltage"]
         },
@@ -994,7 +1117,16 @@ const GUIDE = {
             "Each motor needs a prop made for its direction. Tap a motor to see which prop it needs.",
             "The **leading edge** (thicker, rounded edge) of the prop goes first in the direction of rotation."
           ],
-          diagram: { type: "quadX", mode: "props" },
+          diagrams: [
+            { type: "assembly3d", model: "placeholder-quad",
+              hide: ["battery", "strap"],
+              labels: { prop1: "1 · CCW", prop2: "2 · CCW", prop3: "3 · CW", prop4: "4 · CW" },
+              steps: [
+                { label: "Blue CCW props go on motors 1 and 2", parts: ["prop1", "prop2"], from: "up", distance: 45, spin: { axis: "y", turns: 2 }, stagger: 0.3, callout: true },
+                { label: "Orange CW props go on motors 3 and 4", parts: ["prop3", "prop4"], from: "up", distance: 45, spin: { axis: "y", turns: -2 }, stagger: 0.3, callout: true }
+              ] },
+            { type: "quadX", mode: "props" }
+          ],
           details: "Props are often marked CW/CCW or with an R for reversed. Markings vary by brand, so always check against the rotation arrows.",
           checks: ["Each prop matches its motor's direction", "Prop nuts or screws are tight"]
         }
@@ -1025,6 +1157,11 @@ const GUIDE = {
         {
           id: "preflight", title: "Pre-flight checklist", time: "5 min", level: "easy",
           body: "Do this before **every** flight.",
+          diagram: { type: "assembly3d", model: "placeholder-quad",
+            steps: [
+              { label: "Battery goes on top, centred", parts: "battery", from: "up", distance: 60 },
+              { label: "Strap it down tight", parts: "strap", from: "up", distance: 40 }
+            ] },
           checks: [
             "Props tight and undamaged",
             "Battery fully charged and strapped down",
@@ -1095,6 +1232,7 @@ PHASES.forEach((p, pi) => (p.steps || []).forEach((s, si) => STEPS.push(Object.a
 const IDX = Object.fromEntries(STEPS.map(s => [s.id, s]));
 const GLOSS = Object.fromEntries(Object.entries(GUIDE.glossary || {}).map(([k, v]) => [k.toLowerCase(), { term: k, def: v }]));
 
+const diagramsOf = s => [...(s.diagram ? [s.diagram] : []), ...(s.diagrams || [])];
 function normChecks(s) {
   const out = [];
   if (s.checklistFrom === 'parts') (GUIDE.parts || []).forEach(p => out.push({ key: 'part-' + p.id, text: `${p.qty > 1 ? p.qty + '× ' : ''}${p.name}` }));
@@ -1152,9 +1290,27 @@ function rich(b) {
     if (item.h) return `<h3>${inline(item.h)}</h3>`;
     if (item.note) return `<p class="note">${inline(item.note)}</p>`;
     if (item.code) return `<pre><code>${esc(item.code)}</code></pre>`;
+    if (item.copy) return copyBlockHTML(item.copy);
     if (item.table) { const [h, ...rows] = item.table; return `<table><thead><tr>${h.map(c => `<th>${inline(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${inline(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`; }
     return '';
   }).join('');
+}
+/* {copy:{id,label,fields:[{key,label,options?}],text:[lines]}}: fill-in-the-blanks text with a Copy button (e.g. IT tickets) */
+const COPY = {};
+function copyText(c) {
+  const f = S.prefs.fields || {};
+  return [].concat(c.text || []).join('\n').replace(/\{\{f\.(\w+)\}\}/g, (m, k) => {
+    const v = (f[c.id + '.' + k] || '').trim(), fd = (c.fields || []).find(x => x.key === k);
+    return v || `[${fd ? fd.label : k}]`;
+  }).replace(/\{\{(drone|support)\}\}/g, m => tokens(m));
+}
+function copyBlockHTML(c) {
+  c.id = c.id || 'copy' + Object.keys(COPY).length; COPY[c.id] = c;
+  const f = S.prefs.fields || {};
+  return `<div class="copybox" data-copy="${esc(c.id)}"><div class="cb-h"><b>📋 ${esc(c.label || 'Text to copy')}</b><button type="button" class="btn small primary" data-act="copy" data-id="${esc(c.id)}">Copy ticket</button></div>
+    ${(c.fields || []).length ? `<div class="fields cb-fields">${c.fields.map(fd => { const v = f[c.id + '.' + fd.key] || '';
+      return `<label>${esc(fd.label)}${fd.options ? `<select data-act="cbfield" data-k="${esc(c.id + '.' + fd.key)}"><option value="">Choose…</option>${fd.options.map(o => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>` : `<input data-act="cbfield" data-k="${esc(c.id + '.' + fd.key)}" value="${esc(v)}">`}</label>`; }).join('')}</div>` : ''}
+    <pre class="cb-text">${esc(copyText(c))}</pre></div>`;
 }
 const flat = b => b == null ? '' : typeof b === 'string' ? b : Array.isArray(b) ? b.map(flat).join(' ') : typeof b === 'object' ? Object.values(b).map(flat).join(' ') : String(b);
 
@@ -1519,10 +1675,60 @@ const DIAGRAMS = {
 
   sticks(o) { return { html: widgetBox('sticks', o) }; },
 
+  /* What's in the box. On a step with checklistFrom:"parts" every photo IS the checkbox (tap = found, "Missing?" = flag it). */
   parts() {
-    return { html: `<div class="dg"><div class="dg-title">What's in the box</div><div class="parts">${(GUIDE.parts || []).map(p => `<div class="part">${p.image ? `<img src="${esc(p.image)}" alt="${esc(p.name)}" data-act="zoom">` : `<div class="ph"><span><b>📦</b>Photo: ${esc(p.name)}</span></div>`}<div class="pt"><span class="q">×${p.qty}</span> ${esc(p.name)}${p.note ? `<small>${inline(p.note)}</small>` : ''}</div></div>`).join('')}</div></div>` };
+    return { html: `<div class="dg" id="partsdg">${partsHTML()}</div>` };
+  },
+
+  /* 3D assembly animation, loaded on demand (assembly3d.js + vendor/three.bundle.js + GUIDE.settings.models) */
+  assembly3d(o) {
+    const id = uid();
+    return { html: `<div class="a3d-host" id="${id}" style="margin:16px 0"><div class="dg" style="height:${(o.height || 380) + 120}px;display:grid;place-items:center;color:var(--muted)">Loading 3D animation…</div></div>`,
+      mount(root) {
+        const el = $('#' + id, root);
+        load3D().then(() => {
+          if (!document.body.contains(el)) return;
+          window.Assembly3D.mount(el, o, { debug: EDIT });
+        }).catch(err => {
+          el.innerHTML = `<div class="dg" style="color:var(--muted)">🧊 The 3D animation couldn't load: ${esc(err.message || err)}<br><small>The 3D files (<code>assembly3d.js</code>, <code>vendor/</code>, <code>models/</code>) must sit next to this guide file. The written instructions still work without them.</small></div>`;
+        });
+      } };
   }
 };
+
+function partsHTML() {
+  const s = IDX[S.current], interactive = s && s.checklistFrom === 'parts', x = s ? st(s.id) : { checks: {}, missing: {} };
+  const groups = SET.partGroups || { part: 'Parts', tool: 'Tools' }, all = GUIDE.parts || [];
+  const keys = [...new Set(all.map(p => p.group || 'part'))];
+  const found = all.filter(p => x.checks['part-' + p.id]).length, missing = all.filter(p => (x.missing || {})['part-' + p.id]);
+  const card = p => {
+    const key = 'part-' + p.id, on = !!x.checks[key], miss = !!(x.missing || {})[key];
+    const img = p.image ? `<img src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy">` : `<div class="ph"><span><b>📦</b>Photo: ${esc(p.name)}</span></div>`;
+    const inner = `<span class="pimg">${img}<span class="pbadge">${on ? '✓ Found' : miss ? '✕ Missing' : 'Tap if you have it'}</span></span><span class="pt"><span class="q">×${p.qty}</span> ${esc(p.name)}${p.note ? `<small>${inline(p.note)}</small>` : ''}</span>`;
+    if (!interactive) return `<div class="part">${inner}</div>`;
+    return `<div class="part pick ${on ? 'on' : ''} ${miss ? 'miss' : ''}"><button type="button" class="pbtn" data-act="part" data-key="${key}" aria-pressed="${on}" aria-label="${esc(p.name)}: ${on ? 'found' : 'not found yet'}">${inner}</button>
+      <button type="button" class="pmiss" data-act="missing" data-key="${key}">${miss ? 'Undo missing' : 'Missing?'}</button></div>`;
+  };
+  return `<div class="dg-title">What's in the box${interactive ? ` · <span class="${found === all.length ? 'good' : ''}">${found} of ${all.length} found</span>` : ''}</div>
+    ${missing.length ? `<div class="alert danger"><span class="ai">⛔</span><div><b class="lv">Missing items</b><p>${missing.map(p => esc(p.name)).join(', ')}. Contact ${esc(META.support || 'your instructor')} before you start building.</p></div></div>` : ''}
+    ${keys.map(k => `${keys.length > 1 ? `<h3 class="pgroup">${esc(groups[k] || k)}</h3>` : ''}<div class="parts">${all.filter(p => (p.group || 'part') === k).map(card).join('')}</div>`).join('')}`;
+}
+
+let load3DPromise = null;
+function loadScript(src) {
+  return new Promise((res, rej) => { const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = () => rej(new Error(`missing file "${src}"`)); document.head.appendChild(el); });
+}
+function load3D() {
+  if (window.Assembly3D) return Promise.resolve();
+  if (!load3DPromise) {
+    const base = SET.assetsBase || '';
+    load3DPromise = (window.THREE ? Promise.resolve() : loadScript(base + 'vendor/three.bundle.js'))
+      .then(() => loadScript(base + 'assembly3d.js'))
+      .then(() => Promise.all((SET.models || []).map(m => loadScript(base + m))))
+      .catch(e => { load3DPromise = null; throw e; });
+  }
+  return load3DPromise;
+}
 
 /* ---------------------------------------------------------------- validation (editor mode) */
 const ISSUES = [];
@@ -1532,7 +1738,13 @@ const ISSUES = [];
   STEPS.forEach(s => {
     const where = `Step "${s.title || '?'}" (${s._phase.title})`;
     if (!s.id) ISSUES.push(`${where} has no id.`); else if (seen.has(s.id)) ISSUES.push(`Duplicate step id "${s.id}".`); else seen.add(s.id);
-    if (s.diagram && !DIAGRAMS[s.diagram.type]) ISSUES.push(`${where}: unknown diagram type "${s.diagram.type}".`);
+    diagramsOf(s).forEach(dg => {
+      if (!DIAGRAMS[dg.type]) ISSUES.push(`${where}: unknown diagram type "${dg.type}".`);
+      if (dg.type === 'assembly3d') {
+        if (!dg.model) ISSUES.push(`${where}: assembly3d needs a "model".`);
+        (dg.steps || []).forEach((a, i) => { if (!a.parts && !a.camera && a.action !== 'wait') ISSUES.push(`${where}: assembly3d step ${i + 1} has no "parts".`); });
+      }
+    });
     (s.live || []).forEach(w => { if (!WIDGETS[w]) ISSUES.push(`${where}: unknown live panel "${w}".`); });
     normChecks(s).forEach(c => { if (c.auto && !AUTO[c.auto]) ISSUES.push(`${where}: unknown auto check "${c.auto}".`); });
     if (!normChecks(s).length) ISSUES.push(`${where} has no checks. Readers can continue without confirming anything.`);
@@ -1610,11 +1822,11 @@ function stepHTML(s) {
   });
   if (s.media && s.media.length) h += `<div class="media">${s.media.map(mediaHTML).join('')}</div>`;
   h += `<div class="content">${rich(s.body)}</div>`;
-  if (s.diagram && DIAGRAMS[s.diagram.type]) { const d = DIAGRAMS[s.diagram.type](s.diagram); h += `<div class="dg-wrap">${d.html}</div>`; mountQueue.push(d.mount); }
+  diagramsOf(s).forEach(dg => { if (!DIAGRAMS[dg.type]) return; const d = DIAGRAMS[dg.type](dg); h += `<div class="dg-wrap">${d.html}</div>`; mountQueue.push(d.mount); });
   (s.live || []).forEach(w => h += widgetBox(w, {}));
   if (s.details) h += `<details class="more" ${S.detail === 'detailed' ? 'open' : ''}><summary>More detail</summary><div class="content">${rich(s.details)}</div></details>`;
   const checks = normChecks(s);
-  if (checks.length) h += `<div class="sec-h">✔ Confirm before moving on</div><ul class="checks" id="checks"></ul>`;
+  if (checks.length) h += `<div class="sec-h chk-h">✔ Confirm before moving on</div><ul class="checks" id="checks"></ul>`;
   if (s.troubleshoot && s.troubleshoot.length) h += `<div class="sec-h">🛟 Stuck?</div><div class="trouble">${s.troubleshoot.map(t => `<details><summary>${inline(t.q)}</summary><div class="content">${rich(t.a)}</div></details>`).join('')}</div>`;
   if (s.links && s.links.length) h += `<div class="sec-h">🔗 Links</div><div class="links">${s.links.map(l => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)} ↗</a>`).join('')}</div>`;
   h += `<div class="sec-h">📝 My notes</div><textarea class="note-in" data-act="note" placeholder="Anything worth remembering. Notes appear in your printed report.">${esc(st(s.id).note || '')}</textarea>`;
@@ -1636,7 +1848,9 @@ function footHTML(s) {
 }
 function renderChecks(s) {
   const ul = $('#checks'); if (!ul) return;
-  ul.innerHTML = normChecks(s).map(c => { const on = isTicked(s, c);
+  const list = normChecks(s).filter(c => !(s.checklistFrom === 'parts' && c.key.startsWith('part-')));
+  ul.closest('.main').querySelector('.sec-h.chk-h')?.toggleAttribute('hidden', !list.length);
+  ul.innerHTML = list.map(c => { const on = isTicked(s, c);
     return `<li><label class="chk ${on ? 'on' : ''}"><input type="checkbox" data-act="check" data-c="${esc(c.key)}" ${on ? 'checked' : ''}><span class="box"></span><span class="txt">${inline(c.text)}${c.auto ? ` <span class="badge live" title="Ticks itself when a drone is connected over USB">LIVE</span>` : ''}</span></label></li>`; }).join('');
 }
 function updateFoot(s) {
@@ -1644,12 +1858,13 @@ function updateFoot(s) {
   const left = remaining(s), last = s._idx === STEPS.length - 1, gated = s.gate && !S.acks[s.id];
   const locked = gated || (SET.requireChecks && left > 0);
   b.disabled = locked;
-  b.textContent = gated ? 'Confirm the safety notice first' : locked ? `Tick ${left} more box${left > 1 ? 'es' : ''} to continue` : last ? 'Finish 🏁' : (left ? 'Next step →' : 'Done. Next step →');
+  b.textContent = gated ? 'Confirm the safety notice first' : locked ? `${left} left to confirm` : last ? 'Finish 🏁' : (left ? 'Next step →' : 'Done. Next step →');
 }
 
 let mountQueue = [];
 function renderMain(keepScroll) {
   const main = $('#main'), y = window.scrollY; mountQueue = [];
+  if (window.Assembly3D) window.Assembly3D.destroyAll();         // free WebGL contexts from the previous step
   if (S.current === '__done') main.innerHTML = doneHTML();
   else {
     const s = IDX[S.current] || STEPS[0]; S.current = s.id;
@@ -1718,6 +1933,7 @@ function buildReport() {
     <table><tr><th>Builder</th><td>${esc(S.builder.name || '')}</td><th>Drone ID</th><td>${esc(S.builder.drone || '')}</td></tr>
       <tr><th>Started</th><td>${fmtTime(S.started)}</td><th>Printed</th><td>${fmtTime(now.toISOString())}</td></tr>
       <tr><th>Progress</th><td>${d} / ${STEPS.length} steps</td><th>Live link</th><td>${S.liveSeen ? `${esc(S.liveSeen.autopilot)} · ${esc(S.liveSeen.type)} (first seen ${fmtTime(S.liveSeen.at)})` : 'Not used'}</td></tr>
+      ${(() => { const m = (S.steps.parts || {}).missing || {}; const names = (GUIDE.parts || []).filter(p => m['part-' + p.id]).map(p => esc(p.name)); return names.length ? `<tr><th>Missing parts</th><td colspan="3">${names.join(', ')}</td></tr>` : ''; })()}
       <tr><th>Video channel</th><td>${S.prefs.vtx ? esc(tokens('{{vtx}}')) : '—'}</td><th>Safety notices</th><td>${Object.keys(S.acks).length} acknowledged</td></tr></table>
     <table><thead><tr><th class="w-n">#</th><th class="w-p">Phase</th><th class="w-s">Step</th><th class="w-st">Status</th><th class="w-c">Completed</th><th>Notes</th></tr></thead><tbody>
     ${STEPS.map(s => { const x = S.steps[s.id] || {}; return `<tr><td>${s._pi + 1}.${s._si + 1}</td><td>${esc(s._phase.title)}</td><td>${esc(s.title)}</td><td>${label(x.status)}</td><td>${x.at ? fmtTime(x.at) : ''}</td><td>${esc(x.note || '')}</td></tr>`; }).join('')}</tbody></table>
@@ -1759,6 +1975,20 @@ document.addEventListener('click', e => {
     case 'demo': startDemo(); break;
     case 'disconnect': disconnect(); break;
     case 'close': closeModal(); break;
+    case 'part': case 'missing': {
+      if (!s) break; const x = st(s.id); x.missing = x.missing || {}; const k = t.dataset.key;
+      if (act === 'part') { x.checks[k] = !x.checks[k]; if (x.checks[k]) delete x.missing[k]; }
+      else { x.missing[k] = !x.missing[k]; if (x.missing[k]) x.checks[k] = false; }
+      if (!x.checks[k] && x.status === 'done') { x.status = 'todo'; renderSide(); updateTop(); }
+      save(); $('#partsdg').innerHTML = partsHTML(); updateFoot(s); break;
+    }
+    case 'copy': {
+      const c = COPY[t.dataset.id]; if (!c) break; const txt = copyText(c);
+      const done = () => { t.textContent = 'Copied ✓'; setTimeout(() => t.textContent = 'Copy ticket', 1800); };
+      const fallback = () => { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (er) { alert('Select the text and copy it manually.'); } ta.remove(); };
+      if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(txt).then(done, fallback); else fallback();
+      break;
+    }
     case 'term': e.preventDefault(); showTerm(t); break;
     case 'zoom': modal(`<div style="text-align:center"><img src="${esc(t.getAttribute('src'))}" alt=""></div>`); $('#modal .box').style.width = 'auto'; break;
     case 'print': $('#menu').hidden = true; buildReport(); window.print(); break;
@@ -1789,6 +2019,10 @@ document.addEventListener('input', e => {
   if (t.dataset.act === 'note') { st(S.current).note = t.value; save(); }
   else if (t.dataset.act === 'builder') { S.builder[t.dataset.k] = t.value; save(); }
   else if (t.id === 'q') doSearch(t.value);
+  else if (t.dataset.act === 'cbfield') {
+    S.prefs.fields = S.prefs.fields || {}; S.prefs.fields[t.dataset.k] = t.value; save();
+    const box = t.closest('.copybox'); $('.cb-text', box).textContent = copyText(COPY[box.dataset.copy]);
+  }
 });
 document.addEventListener('keydown', e => {
   const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);

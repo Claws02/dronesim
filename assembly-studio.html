@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Assembly Studio · 3D animation authoring</title>
+<style>
+:root{--bg:#0a0e13;--panel:#11171e;--panel2:#171f28;--line:#232e3b;--line2:#2f3d4e;--text:#e6edf3;--muted:#8a97a7;--accent:#ffb020;--accent-ink:#1a1200;--ok:#3fb950;--danger:#ff5b5b;--info:#58a6ff;--radius:10px;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 var(--sans)}
+header{display:flex;align-items:center;gap:14px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{font-size:16px;margin:0}header small{color:var(--muted);font-family:var(--mono)}
+header a{color:var(--info);margin-left:auto;font-size:13px}
+.wrap{display:grid;grid-template-columns:minmax(340px,520px) minmax(0,1fr);gap:14px;padding:14px;height:calc(100vh - 50px)}
+.col{display:flex;flex-direction:column;gap:10px;min-height:0;overflow:auto}
+#viewer{flex:none}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px}
+.card h2{font:600 11px var(--mono);letter-spacing:.7px;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+select,button,input[type=text]{font:inherit;color:inherit;background:var(--panel2);border:1px solid var(--line2);border-radius:8px;padding:6px 10px}
+button{cursor:pointer}button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+textarea{width:100%;flex:1;min-height:260px;background:#070a0e;color:#d7e3ee;border:1px solid var(--line2);border-radius:8px;padding:10px;font:12.5px/1.5 var(--mono);resize:none;tab-size:2}
+.grow{flex:1;min-height:0;display:flex;flex-direction:column}
+#err{color:var(--danger);font:12px var(--mono);white-space:pre-wrap;margin:6px 0 0}
+#parts{overflow:auto;max-height:230px;font:12px var(--mono)}
+#parts table{width:100%;border-collapse:collapse}
+#parts td,#parts th{padding:3px 6px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+#parts tr:hover td{background:var(--panel2);cursor:pointer}
+#parts .sub td:first-child{padding-left:18px;color:var(--muted)}
+#pick{font:12px var(--mono);color:var(--muted);min-height:18px}
+.drop{border:2px dashed var(--line2);border-radius:8px;padding:10px;text-align:center;color:var(--muted);font-size:13px}
+.drop.over{border-color:var(--accent);color:var(--text)}
+#viewer{min-height:420px}
+.hint{color:var(--muted);font-size:12.5px;margin:6px 0 0}
+kbd{font:11px var(--mono);border:1px solid var(--line2);border-radius:4px;padding:0 4px}
+@media(max-width:900px){.wrap{grid-template-columns:1fr;height:auto}}
+</style>
+</head>
+<body>
+<header><h1>🎬 Assembly Studio</h1><small>author 3D assembly animations for the setup guide</small><a href="ASSEMBLY_ANIMATION_GUIDE.md" target="_blank">Animation guide ↗</a></header>
+<div class="wrap">
+  <div class="col">
+    <div class="card">
+      <h2>1 · Model</h2>
+      <div class="row"><select id="modelSel"></select><button id="openBtn">Open .glb…</button><input id="file" type="file" accept=".glb,.gltf" hidden>
+        <button id="exportBtn" disabled title="Wraps the opened GLB in a .js file so the guide can load it offline (file://)">⬇ Make offline model file</button></div>
+      <div class="drop" id="drop" style="margin-top:8px">…or drop a <b>.glb</b> file here</div>
+    </div>
+    <div class="card grow">
+      <h2>2 · Animation config <span style="text-transform:none;letter-spacing:0">(paste into a step's <code>diagram</code>)</span></h2>
+      <div class="row" style="margin-bottom:8px"><button class="primary" id="runBtn">▶ Run <kbd>Ctrl</kbd>+<kbd>Enter</kbd></button><button id="copyBtn">Copy</button><select id="exampleSel"><option value="">Load example…</option></select></div>
+      <textarea id="cfg" spellcheck="false"></textarea>
+      <div id="err"></div>
+    </div>
+  </div>
+  <div class="col">
+    <div id="viewer"></div>
+    <div class="card"><h2>3 · Parts in this model <span style="text-transform:none;letter-spacing:0">(click a row to flash it · click the 3D model to identify a part)</span></h2>
+      <div id="pick">Click any part in the 3D view to see its name and the point you clicked.</div>
+      <div id="parts"></div>
+      <p class="hint">Sizes are in model units (the placeholder uses mm). Offsets in <code>from</code>/<code>to</code>/<code>path</code> use the same units. Direction words: up, down, left, right, front, back, out, in, or axes like "+y-z".</p>
+    </div>
+  </div>
+</div>
+<script src="vendor/three.bundle.js"></script>
+<script src="assembly3d.js"></script>
+<script src="models/placeholder-quad.js"></script>
+<script>
+(function () {
+const $ = s => document.querySelector(s);
+const LAZY = { x500: 'examples/x500/x500.glb.js' };   // real-CAD models loaded only when an example needs them
+const EXAMPLES = {
+  'Real CAD: Holybro X500 (PX4 Gazebo model)': `{
+  type: "assembly3d",
+  model: "x500",
+  labels: { motor1: "1 · CCW", motor2: "2 · CCW", motor3: "3 · CW", motor4: "4 · CW", prop1: "CCW", prop2: "CCW", prop3: "CW", prop4: "CW" },
+  steps: [
+    { label: "Carbon frame and rails", parts: ["frame", "hardware", "rails_rubber", "antenna_holder"], from: "down", stagger: 0.1 },
+    { label: "Landing gear clips on underneath", parts: ["landing_gear", "landing_foam", "landing_rubber"], from: "down", distance: 0.15, stagger: 0.1 },
+    { label: "Motor mounts go on the arm ends", parts: "motor?_base", from: "out", distance: 0.15, stagger: 0.15 },
+    { label: "Motors drop onto the mounts (PX4 order)", parts: ["motor1", "motor2", "motor3", "motor4"], from: "up", distance: 0.15, stagger: 0.35, callout: true },
+    { label: "Flight controller on its dampers", parts: ["fc_dampers", "fc"], from: "up", distance: 0.18, stagger: 0.25, camera: { focus: "fc", zoom: 2.2 } },
+    { action: "camera", label: "Back out", camera: { zoom: 1 } },
+    { label: "Props: CCW on 1 and 2, CW on 3 and 4", parts: ["prop1", "prop2", "prop3", "prop4"], from: "up", distance: 0.12, spin: { axis: "y", turns: 2 }, stagger: 0.25, callout: true }
+  ]
+}`,
+  'Motors drop onto arms (with labels)': `{
+  type: "assembly3d",
+  model: "placeholder-quad",
+  show: ["frame*", "arm_*", "standoff*"],
+  labels: { motor1: "Motor 1", motor2: "Motor 2", motor3: "Motor 3", motor4: "Motor 4" },
+  steps: [
+    { label: "Place motor 1 on the front-right arm", parts: "motor1", from: "up", rotate: [0, 90, 0], callout: true },
+    { label: "Then motors 2, 3 and 4", parts: ["motor2", "motor3", "motor4"], from: "up", rotate: [0, 90, 0], stagger: 0.35, callout: true }
+  ]
+}`,
+  'Full build, exploded → assembled': `{
+  type: "assembly3d",
+  model: "placeholder-quad",
+  hide: ["prop*"],
+  steps: [
+    { label: "Bottom plate", parts: "frame_bottom", from: "down" },
+    { label: "Arms slide in", parts: "arm_*", from: "out", stagger: 0.15 },
+    { label: "ESC and power module", parts: ["esc", "pm"], from: "up", stagger: 0.2 },
+    { label: "Flight controller, arrow forward", parts: "fc", from: "up", rotate: [0, 180, 0], camera: { focus: "fc", zoom: 1.8 } },
+    { label: "Motors", parts: "motor*", from: "up", stagger: 0.2, camera: { zoom: 1 } },
+    { label: "Standoffs and top plate", parts: ["standoff*", "frame_top"], from: "up", stagger: 0.1 },
+    { label: "GPS mast and puck", parts: ["gps_mast", "gps"], from: "up", stagger: 0.3 },
+    { label: "Camera and video", parts: ["camera", "vtx", "vtx_antenna"], from: "front", stagger: 0.2 },
+    { label: "Battery and strap", parts: ["battery", "strap"], from: "up", stagger: 0.4 }
+  ]
+}`,
+  'Props spin on in their direction': `{
+  type: "assembly3d",
+  model: "placeholder-quad",
+  steps: [
+    { label: "CCW props on motors 1 and 2", parts: ["prop1", "prop2"], from: "up", distance: 50, spin: { axis: "y", turns: 2 }, stagger: 0.2 },
+    { label: "CW props on motors 3 and 4", parts: ["prop3", "prop4"], from: "up", distance: 50, spin: { axis: "y", turns: -2 }, stagger: 0.2 }
+  ]
+}`,
+  'Curved path + camera move': `{
+  type: "assembly3d",
+  model: "placeholder-quad",
+  show: ["frame*", "arm_*", "standoff*", "esc", "fc"],
+  steps: [
+    { label: "Receiver comes in from the side, then tucks under", parts: "rx", from: [-120, 40, -30], path: [[-60, 30, -30]], duration: 1.8, camera: { focus: "rx", zoom: 1.5 } },
+    { label: "Antenna routes out the back", parts: "rx_antenna", from: "back", distance: 60 },
+    { action: "camera", label: "Back to the full view", camera: { zoom: 1, target: [0, 20, 0] } }
+  ]
+}`,
+  'Remove + highlight (maintenance)': `{
+  type: "assembly3d",
+  model: "placeholder-quad",
+  steps: [
+    { label: "Lift the battery off", action: "remove", parts: ["strap", "battery"], to: "up", stagger: 0.3, hideAfter: false },
+    { label: "Check the arrow on the flight controller", action: "highlight", parts: "fc_arrow", callout: "Points forward" },
+    { label: "Put the battery back", parts: ["battery", "strap"], from: "up", stagger: 0.3 }
+  ]
+}`
+};
+let player = null, loadedFile = null, currentModelKey = null;
+
+function listModels() {
+  const sel = $('#modelSel'), keep = sel.value;
+  sel.innerHTML = [...Object.keys(Assembly3D.builders).map(k => `<option value="${k}">${k} (built-in)</option>`), ...Object.keys(Assembly3D.models).map(k => `<option value="${k}">${k} (glb)</option>`)].join('');
+  if (keep && [...sel.options].some(o => o.value === keep)) sel.value = keep;
+}
+function parseCfg() {
+  try { const c = new Function('"use strict"; return (' + $('#cfg').value + ')')(); $('#err').textContent = ''; return c; }
+  catch (e) { $('#err').textContent = 'Config error: ' + e.message; return null; }
+}
+function run() {
+  const cfg = parseCfg(); if (!cfg) return;
+  if (!cfg.model) cfg.model = $('#modelSel').value;
+  if (LAZY[cfg.model] && !Assembly3D.models[cfg.model]) {
+    $('#err').textContent = 'Loading ' + cfg.model + ' model (' + LAZY[cfg.model] + ')…';
+    const el = document.createElement('script'); el.src = LAZY[cfg.model];
+    el.onload = () => { $('#err').textContent = ''; listModels(); $('#modelSel').value = cfg.model; run(); };
+    el.onerror = () => { $('#err').textContent = 'Could not load ' + LAZY[cfg.model] + '. Is the examples/ folder next to this page?'; };
+    document.head.appendChild(el); return;
+  }
+  if (player && currentModelKey === cfg.model) { player.setConfig(cfg); showIssues(); return; }
+  if (player) player.destroy();
+  currentModelKey = cfg.model;
+  player = Assembly3D.mount($('#viewer'), cfg, { height: Math.max(380, window.innerHeight - 520), debug: true, onPick: showPick, onReady: () => { renderParts(); showIssues(); } });
+  player.ready.catch(e => { $('#err').textContent = String(e.message || e); });
+}
+function showIssues() { if (player && player.issues.length) $('#err').textContent = 'Warnings:\n• ' + player.issues.join('\n• '); }
+function renderParts() {
+  const rows = player.parts.map(p => `<tr class="${p.parent ? 'sub' : ''}" data-n="${p.name}"><td>${p.name}</td><td>${p.type}</td><td>${p.size.map(v => +v.toFixed(2)).join(' × ')}</td><td>${p.center.map(v => +v.toFixed(1)).join(', ')}</td></tr>`).join('');
+  $('#parts').innerHTML = `<table><thead><tr><th>name</th><th>type</th><th>size (x × y × z)</th><th>centre</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+function showPick(p) { $('#pick').innerHTML = p ? `<b style="color:var(--accent)">${p.name}</b> · chain: ${p.chain.join(' ← ')} · point: [${p.point.join(', ')}]` : 'Nothing there.'; }
+function openFile(f) {
+  if (!f) return;
+  loadedFile = f; const name = f.name.replace(/\.(glb|gltf)$/i, '').replace(/[^\w-]+/g, '-');
+  Assembly3D.registerModel(name, URL.createObjectURL(f));
+  listModels(); $('#modelSel').value = name; $('#exportBtn').disabled = false;
+  $('#cfg').value = `{\n  type: "assembly3d",\n  model: "${name}",\n  steps: [\n    // Look at the parts table, then e.g.:\n    // { label: "Attach the arm", parts: "arm*", from: "out" }\n  ]\n}`;
+  run();
+}
+
+$('#runBtn').onclick = run;
+$('#cfg').addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); run(); }
+  if (e.key === 'Tab') { e.preventDefault(); const t = e.target, s = t.selectionStart; t.setRangeText('  ', s, t.selectionEnd, 'end'); }
+});
+$('#copyBtn').onclick = async () => { try { await navigator.clipboard.writeText($('#cfg').value); $('#copyBtn').textContent = 'Copied ✓'; } catch (e) { $('#cfg').select(); document.execCommand('copy'); $('#copyBtn').textContent = 'Copied ✓'; } setTimeout(() => $('#copyBtn').textContent = 'Copy', 1500); };
+$('#modelSel').onchange = () => { const c = parseCfg(); if (c) { $('#cfg').value = $('#cfg').value.replace(/model:\s*"[^"]*"/, `model: "${$('#modelSel').value}"`); run(); } };
+$('#parts').onclick = e => { const tr = e.target.closest('tr[data-n]'); if (tr && player) { player.flash(tr.dataset.n); navigator.clipboard && navigator.clipboard.writeText('"' + tr.dataset.n + '"').catch(() => {}); $('#pick').innerHTML = `Flashed <b style="color:var(--accent)">${tr.dataset.n}</b> (name copied)`; } };
+$('#openBtn').onclick = () => $('#file').click();
+$('#file').onchange = e => openFile(e.target.files[0]);
+const drop = $('#drop');
+['dragenter', 'dragover'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); if (ev === 'drop') openFile(e.dataTransfer.files[0]); drop.classList.remove('over'); }));
+$('#exportBtn').onclick = () => {
+  if (!loadedFile) return;
+  const name = $('#modelSel').value, rd = new FileReader();
+  rd.onload = () => {
+    const js = `/* Offline wrapper for ${loadedFile.name}, generated by Assembly Studio. List this file in GUIDE.settings.models. */\n(window.ASSEMBLY_MODELS = window.ASSEMBLY_MODELS || {})[${JSON.stringify(name)}] = ${JSON.stringify(rd.result)};\n`;
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([js], { type: 'text/javascript' })); a.download = name + '.glb.js'; a.click();
+  };
+  rd.readAsDataURL(new Blob([loadedFile], { type: 'model/gltf-binary' }));
+};
+const exSel = $('#exampleSel');
+exSel.innerHTML += Object.keys(EXAMPLES).map(k => `<option>${k}</option>`).join('');
+exSel.onchange = () => { if (exSel.value) { $('#cfg').value = EXAMPLES[exSel.value]; run(); exSel.value = ''; } };
+
+listModels();
+$('#cfg').value = EXAMPLES['Full build, exploded → assembled'];
+run();
+window.studio = { get player() { return player; }, run };
+})();
+</script>
+</body>
+</html>
