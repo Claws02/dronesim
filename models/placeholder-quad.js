@@ -53,19 +53,19 @@
     root.add(at(mesh('frame_bottom', flat(s, 3), 'carbon'), 0, 1.5, 0)); }
 
   Object.values(corners).forEach(([x, z, , tag]) => {
-    const L = 120, W = 14, s = new THREE.Shape();
+    const L = 99, W = 14, s = new THREE.Shape();                          // inner end at r = 24 mm (under the plates), motor at r = 116 mm
     s.moveTo(-L / 2, -W / 2 + 1); s.lineTo(L / 2 - W / 2, -W / 2); s.absarc(L / 2 - W / 2, 0, W / 2 + 1, -Math.PI / 2, Math.PI / 2, false); s.lineTo(-L / 2, W / 2 - 1); s.closePath();
     s.holes.push(slot(-10, 0, 26, 2.6));                                     // lightening slot
     s.holes.push(circle(L / 2 - W / 2, 0, 2.8));                             // motor shaft clearance
-    [[0, 4.7], [0, -4.7], [4.7, 0], [-4.7, 0]].forEach(([dx, dz]) => s.holes.push(circle(L / 2 - W / 2 + dx * 0.0 + dx, dz, 0.9)));
+    [[0, 4.7], [0, -4.7], [4.7, 0], [-4.7, 0]].forEach(([dx, dz]) => s.holes.push(circle(L / 2 - W / 2 + dx, dz, 0.9)));
     const a = mesh('arm_' + tag, flat(s, 4), 'carbon');
     const d = V(x, 0, z).normalize();
-    a.position.set(d.x * 62, 5, d.z * 62); a.rotation.y = Math.atan2(-d.z, d.x);
+    a.position.set(d.x * 73.5, 5, d.z * 73.5); a.rotation.y = Math.atan2(-d.z, d.x);
     root.add(a);
   });
 
   [[26, -42], [-26, -42], [-26, 42], [26, 42]].forEach(([x, z], i) =>
-    root.add(at(mesh('standoff_' + (i + 1), new THREE.CylinderGeometry(2.6, 2.6, 28, 6), 'anodized', 0xd8342c), x, 21, z)));
+    root.add(at(mesh('standoff_' + (i + 1), new THREE.CylinderGeometry(2.6, 2.6, 32, 6), 'anodized', 0xd8342c), x, 19, z)));   // y 3 → 35
 
   { const s = roundedRect(60, 96, 8);
     s.holes.push(slot(0, -30, 16, 3.5)); s.holes.push(slot(0, 30, 16, 3.5));
@@ -106,7 +106,7 @@
       g.rotateY(-a + Math.PI / 2); g.translate(Math.cos(a) * 13.85, 10.5, Math.sin(a) * 13.85); parts.push(g); }
     const pos = [], nor = []; parts.forEach(g => { pos.push(...g.attributes.position.array); nor.push(...g.attributes.normal.array); });
     const m = new THREE.BufferGeometry(); m.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); m.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); return m; })();
-  const hubGeo = lathe([[0, -3], [6, -3], [6.5, -1], [5, 3], [0, 3]], 16);
+  const hubGeo = lathe([[2.6, -3], [6, -3], [6.5, -1], [5, 3], [2.6, 3], [2.6, -3]], 16);   // bored for the 5 mm shaft
 
   Object.entries(corners).forEach(([n, [x, z, dir]]) => {
     const m = group('motor' + n, x, 7, z);
@@ -117,11 +117,11 @@
     m.add(at(mesh('motor' + n + '_shaft', new THREE.CylinderGeometry(2.5, 2.5, 7, 16), 'steel'), 0, 21, 0));
     root.add(m);
 
-    const p = group('prop' + n, x, 30, z);
+    const p = group('prop' + n, x, 29.1, z);                                // hub bottom sits on the motor cap (y 26.1)
     p.add(mesh('prop' + n + '_hub', hubGeo, 'prop', dir === 'cw' ? 0xff7a1a : 0x2f8fff));
     const bl = mesh('prop' + n + '_blades', dir === 'cw' ? geoCW : geoCCW, 'prop', dir === 'cw' ? 0xff7a1a : 0x2f8fff);
     bl.material.side = THREE.DoubleSide; p.add(bl);
-    p.add(at(mesh('prop' + n + '_nut', new THREE.CylinderGeometry(3.6, 3.6, 4, 6), 'anodized', 0xd8342c), 0, 4.6, 0));
+    p.add(at(mesh('prop' + n + '_nut', new THREE.CylinderGeometry(3.6, 3.6, 4, 6), 'anodized', 0xd8342c), 0, 5, 0));
     p.rotation.y = n % 2 ? 0.4 : -0.6;
     root.add(p);
   });
@@ -132,15 +132,17 @@
     esc.add(board('esc_board', 32, 32, 1.6, 'pcb', 0x161a1f));
     [[-8, -8], [8, -8], [-8, 8], [8, 8]].forEach(([x, z], i) => esc.add(at(mesh('esc_fet' + i, new THREE.BoxGeometry(5, 1.2, 6), 'plastic', 0x111111), x, 1.4, z)));
     esc.add(at(mesh('esc_mcu', new THREE.BoxGeometry(6, 1, 6), 'plastic', 0x0b0b0b), 0, 1.3, 0));
-    esc.add(at(mesh('esc_cap', new THREE.CylinderGeometry(4, 4, 11, 20), 'plastic', 0x22262b), 0, 2.2, 22, Math.PI / 2, 0, 0));
+    esc.add(at(mesh('esc_cap', new THREE.CylinderGeometry(3.2, 3.2, 11, 20), 'plastic', 0x22262b), 0, 4.0, 10, Math.PI / 2, 0, 0));
+    [[13.5, 13.5], [-13.5, 13.5], [-13.5, -13.5], [13.5, -13.5]].forEach(([x, z], i) =>          // stack standoffs: bottom plate (y3) → ESC
+      esc.add(at(mesh('esc_post' + i, new THREE.CylinderGeometry(1.8, 1.8, 8.2, 6), 'anodized', 0x1a1c1f), x, -4.9, z)));
     root.add(esc); }
 
-  { const pm = group('pm', 0, 6.5, 40);
+  { const pm = group('pm', 0, 3.8, 40);                                      // board sits on the bottom plate (y 3)
     pm.add(board('pm_board', 18, 22, 1.6, 'pcb', 0x1d6b3e));
     pm.add(at(mesh('pm_shunt', new THREE.BoxGeometry(8, 1.4, 3), 'copper'), 0, 1.4, -4));
-    pm.add(at(mesh('pm_xt60', roundedBox(16, 8, 8, 1.5), 'plastic', 0xf2c200), 0, 0, 14));
-    pm.add(mesh('pm_wire_red', tube([[3, 0, 9], [4, 2, 4], [5, 4, -6]], 1.3, 16), 'rubber', 0xc62828));
-    pm.add(mesh('pm_wire_black', tube([[-3, 0, 9], [-4, 2, 4], [-5, 4, -6]], 1.3, 16), 'rubber'));
+    pm.add(at(mesh('pm_xt60', roundedBox(16, 8, 8, 1.5), 'plastic', 0xf2c200), 0, 3.2, 15));
+    pm.add(mesh('pm_wire_red', tube([[3, 2.1, 6], [4, 6, -10], [5, 8.2, -23.5]], 1.3, 16), 'rubber', 0xc62828));   // to the ESC power pads
+    pm.add(mesh('pm_wire_black', tube([[-3, 2.1, 6], [-4, 6, -10], [-5, 8.2, -23.5]], 1.3, 16), 'rubber'));
     root.add(pm); }
 
   { const fc = group('fc', 0, 24, 0);                                       // Pixhawk-style flight controller in a case
@@ -148,6 +150,8 @@
     fc.add(at(mesh('fc_case_band', roundedBox(36.6, 1.6, 36.6, 4.2), 'aluminum', 0x8c949e), 0, -2, 0));
     for (let k = 0; k < 5; k++) fc.add(at(mesh('fc_port' + k, new THREE.BoxGeometry(5, 2.4, 1.6), 'plastic', 0x1a1c1f), -12 + k * 6, 0.2, 18.4));
     fc.add(at(mesh('fc_usb', new THREE.BoxGeometry(7, 2.2, 1.6), 'steel'), 0, 0.2, -18.4));
+    [[13.5, 13.5], [-13.5, 13.5], [-13.5, -13.5], [13.5, -13.5]].forEach(([x, z], i) =>          // stack standoffs: ESC top (y 12.8) → FC case
+      fc.add(at(mesh('fc_post' + i, new THREE.CylinderGeometry(1.8, 1.8, 7.7, 6), 'anodized', 0x1a1c1f), x, -7.35, z)));
     const arrow = mesh('fc_arrow', flat(arrowShape(14, 10), 0.6, 0.15), 'plastic', 0xffb020);
     arrow.position.set(0, 3.8, -2); fc.add(arrow);
     root.add(fc); }
@@ -155,40 +159,44 @@
   /* ---------- GPS ---------- */
   { const mast = group('gps_mast', 0, 57.5, 42);
     mast.add(mesh('gps_mast_tube', new THREE.CylinderGeometry(2, 2, 40, 16), 'carbon'));
-    mast.add(at(mesh('gps_mast_clamp', new THREE.CylinderGeometry(3.6, 4.2, 5, 16), 'anodized', 0xd8342c), 0, -18, 0));
+    mast.add(at(mesh('gps_mast_clamp', new THREE.CylinderGeometry(3.6, 4.2, 5, 16), 'anodized', 0xd8342c), 0, -17.5, 0));
     mast.add(at(mesh('gps_mast_top', new THREE.CylinderGeometry(6, 6, 2, 20), 'plastic', 0x1a1c1f), 0, 20, 0));
     root.add(mast); }
-  { const gps = group('gps', 0, 81, 42);
+  { const gps = group('gps', 0, 82, 42);                                     // puck bottom on the mast top (y 78.5)
     gps.add(mesh('gps_puck', lathe([[0, -3.5], [17, -3.5], [17.5, -1.5], [16.5, 1.5], [12, 3.4], [0, 3.8]], 48), 'glossy-plastic', 0x1c1e22));
     const ga = mesh('gps_arrow', flat(arrowShape(11, 8), 0.5, 0.12), 'plastic', 0xffb020); ga.position.set(0, 4, -4); gps.add(ga);
     gps.add(at(mesh('gps_led', new THREE.CylinderGeometry(1.4, 1.4, 0.6, 12), 'glossy-plastic', 0x3ad16b), 0, 3.9, 8));
     root.add(gps); }
 
   /* ---------- receiver ---------- */
-  { const rx = group('rx', -16, 6, -30);
+  { const rx = group('rx', -26.5, 4.5, 0); rx.rotation.y = Math.PI / 2;       // on the bottom plate, between the left arms
     rx.add(mesh('rx_board', roundedBox(12, 3, 18, 1.5), 'lipo', 0x3a7bd5));     // receiver in clear blue heat-shrink
     rx.add(at(mesh('rx_led', new THREE.BoxGeometry(1.6, 0.6, 1.6), 'glossy-plastic', 0x3ad16b), 2, 1.7, -5));
     root.add(rx); }
-  { const ant = group('rx_antenna', -16, 3, 58);
-    ant.add(mesh('rx_antenna_coax', tube([[0, 3, -88], [0, 1, -60], [0, 0, -30], [0, 0, 0]], 0.7, 24), 'rubber'));
-    ant.add(at(mesh('rx_antenna_dipole', new THREE.CylinderGeometry(0.9, 0.9, 30, 10), 'rubber'), 0, 0, 0, 0, 0, Math.PI / 2));
+  { const ant = group('rx_antenna', -29.5, 19, 42);                         // zip-tied to the rear-left standoff
+    ant.add(mesh('rx_antenna_coax', tube([[-0.5, -14, -35.4], [-0.8, -10, -28], [-1, -10, -14], [-0.8, -6, -4], [0, 0, 0]], 0.7, 24), 'rubber'));
+    ant.add(mesh('rx_antenna_dipole', new THREE.CylinderGeometry(0.9, 0.9, 30, 10), 'rubber'));
+    [-8, 8].forEach((y, i) => ant.add(at(mesh('rx_antenna_ziptie' + i, new THREE.TorusGeometry(4.9, 0.45, 6, 20), 'plastic', 0x111111), 1.75, y, 0, Math.PI / 2, 0, 0)));
     root.add(ant); }
 
   /* ---------- FPV camera + VTX ---------- */
-  { const cam = group('camera', 0, 22, -54); cam.rotation.x = 0.25;
-    cam.add(mesh('camera_body', roundedBox(19, 19, 17, 3), 'black-metal'));
-    cam.add(at(mesh('camera_barrel', lathe([[7, 0], [7, 4], [6.2, 4.6], [6.2, 9], [5.4, 9.6], [0, 9.6]], 32), 'black-metal'), 0, 0, -8.5, -Math.PI / 2, 0, 0));
-    cam.add(at(mesh('camera_lens', new THREE.SphereGeometry(4.8, 18, 6, 0, Math.PI * 2, 0, Math.PI / 2.4), 'lens'), 0, 0, -17.6, -Math.PI / 2, 0, 0));
-    [-10.6, 10.6].forEach((x, i) => cam.add(at(mesh('camera_side' + i, roundedBox(2, 21, 20, 3), 'plastic', 0xff6a2a), x, 0, 0)));
+  { const cam = group('camera', 0, 22, -54);
+    const head = group('camera_head'); head.rotation.x = 0.25; cam.add(head);   // only the camera head tilts up
+    head.add(mesh('camera_body', roundedBox(19, 19, 17, 3), 'black-metal'));
+    head.add(at(mesh('camera_barrel', lathe([[7, 0], [7, 4], [6.2, 4.6], [6.2, 9], [5.4, 9.6], [0, 9.6]], 32), 'black-metal'), 0, 0, -8.5, -Math.PI / 2, 0, 0));
+    head.add(at(mesh('camera_lens', new THREE.SphereGeometry(4.8, 18, 6, 0, Math.PI * 2, 0, Math.PI / 2.4), 'lens'), 0, 0, -17.6, -Math.PI / 2, 0, 0));
+    [-10.6, 10.6].forEach((x, i) => cam.add(at(mesh('camera_side' + i, roundedBox(2, 32, 20, 3), 'plastic', 0xff6a2a), x, -3, 0)));   // bottom plate (y3) → top plate (y35)
     root.add(cam); }
-  { const vtx = group('vtx', 0, 31, 30);
+  { const vtx = group('vtx', 0, 34.2, 30);                                  // taped to the underside of the top plate (y 35)
     vtx.add(board('vtx_board', 20, 22, 1.6, 'pcb', 0x161a1f));
-    vtx.add(at(mesh('vtx_shield', roundedBox(14, 2.4, 14, 1), 'aluminum'), 0, 2, -2));
-    vtx.add(at(mesh('vtx_ufl', new THREE.CylinderGeometry(1.3, 1.3, 1.6, 12), 'steel'), 6, 1.6, 8));
+    vtx.add(at(mesh('vtx_shield', roundedBox(14, 2.4, 14, 1), 'aluminum'), 0, -2, -2));
+    vtx.add(at(mesh('vtx_ufl', new THREE.CylinderGeometry(1.3, 1.3, 1.6, 12), 'steel'), 6, -1.6, 8));
     root.add(vtx); }
-  { const va = group('vtx_antenna', 0, 38, 50); va.rotation.x = -0.6;
-    va.add(at(mesh('vtx_antenna_stem', new THREE.CylinderGeometry(1.4, 1.6, 30, 12), 'rubber'), 0, 15, 0));
-    const tip = mesh('vtx_antenna_tip', new THREE.SphereGeometry(5, 16, 10), 'glossy-plastic', 0x1a1c1f); tip.scale.set(1, 0.75, 1); tip.position.y = 31; va.add(tip);
+  { const va = group('vtx_antenna', 15, 37.5, 44);                          // SMA mount on the top plate, rear-right
+    va.add(at(mesh('vtx_antenna_sma', new THREE.CylinderGeometry(3.2, 3.2, 3, 6), 'steel'), 0, 1.5, 0));
+    const mast = group('vtx_antenna_mast', 0, 3, 0); mast.rotation.x = 0.6; va.add(mast);   // leans back, away from the battery
+    mast.add(at(mesh('vtx_antenna_stem', new THREE.CylinderGeometry(1.4, 1.6, 30, 12), 'rubber'), 0, 15, 0));
+    const tip = mesh('vtx_antenna_tip', new THREE.SphereGeometry(5, 16, 10), 'glossy-plastic', 0x1a1c1f); tip.scale.set(1, 0.75, 1); tip.position.y = 33.5; mast.add(tip);
     root.add(va); }
 
   /* ---------- battery + strap ---------- */
@@ -206,13 +214,12 @@
     bat.add(at(mesh('battery_xt60', roundedBox(16, 8, 8, 1.5), 'plastic', 0xf2c200), 0, -1, 58));
     bat.add(mesh('battery_balance', tube([[-10, 6, 36], [-12, 9, 44], [-8, 12, 50]], 0.9, 16), 'rubber', 0xf2f2f2));
     root.add(bat); }
-  { const strap = group('strap', 0, 51.5, 0);
-    const path = new THREE.CurvePath(), hw = 18.4, top = 15, bot = -14.5, r = 3;
-    [[V(-hw, bot, 0), V(-hw, top - r, 0)], [V(-hw + r, top, 0), V(hw - r, top, 0)], [V(hw, top - r, 0), V(hw, bot, 0)]].forEach(([a, b]) => path.add(new THREE.LineCurve3(a, b)));
-    const shape = new THREE.Shape([new THREE.Vector2(-0.7, -7), new THREE.Vector2(0.7, -7), new THREE.Vector2(0.7, 7), new THREE.Vector2(-0.7, 7)]);
-    const geo = new THREE.ExtrudeGeometry(shape, { steps: 28, bevelEnabled: false, extrudePath: new THREE.CatmullRomCurve3(path.getSpacedPoints(28)) });
-    strap.add(mesh('strap_band', geo, 'rubber', 0xb32020));
-    strap.add(at(mesh('strap_buckle', roundedBox(10, 1.6, 16, 1.5), 'aluminum'), 0, top + 0.9, 0));
+  { const strap = group('strap', 0, 51.5, 0);                              // battery spans x ±17, y -14 → 14 (local)
+    const t = 1.4, w = 14, hx = 17 + t / 2;
+    strap.add(at(mesh('strap_left', new THREE.BoxGeometry(t, 28, w), 'rubber', 0xb32020), -hx, 0, 0));
+    strap.add(at(mesh('strap_right', new THREE.BoxGeometry(t, 28, w), 'rubber', 0xb32020), hx, 0, 0));
+    strap.add(at(mesh('strap_top', new THREE.BoxGeometry(2 * hx + t, t, w), 'rubber', 0xb32020), 0, 14 + t / 2, 0));
+    strap.add(at(mesh('strap_buckle', roundedBox(10, 1.6, 16, 1.5), 'aluminum'), 0, 14 + t + 0.8, 0));
     root.add(strap); }
 
   return root;
