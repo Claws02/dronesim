@@ -720,8 +720,8 @@ const GUIDE = {
             { type: "assembly3d", model: "placeholder-quad",
               show: ["frame_*", "arm_*", "motor*", "esc", "pm", "standoff_*", "fc"],
               steps: [
-                { label: "Slide the receiver in from the side", parts: "rx", from: [-110, 0, 0], path: [[-60, 0, 0]], camera: { focus: "rx", zoom: 1.5 } },
-                { label: "Route the antenna out the back", parts: "rx_antenna", from: "back", distance: 50 }
+                { label: "Slide the receiver onto the left side of the bottom plate", parts: "rx", from: [-110, 0, 0], path: [[-60, 0, 0]], camera: { focus: "rx", zoom: 1.6, direction: [-1, 0.9, -0.5] } },
+                { label: "Run the antenna wire back and zip-tie the antenna to the rear standoff", parts: "rx_antenna", from: "back", distance: 50, camera: { focus: "rx_antenna", zoom: 1.4, direction: [-1, 0.6, 0.9] } }
               ] },
             { type: "wiring", focus: ["rx", "fc"] }
           ],
