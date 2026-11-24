@@ -69,7 +69,22 @@ kbd{font:11px var(--mono);border:1px solid var(--line2);border-radius:4px;paddin
 <script>
 (function () {
 const $ = s => document.querySelector(s);
+const LAZY = { x500: 'examples/x500/x500.glb.js' };   // real-CAD models loaded only when an example needs them
 const EXAMPLES = {
+  'Real CAD: Holybro X500 (PX4 Gazebo model)': `{
+  type: "assembly3d",
+  model: "x500",
+  labels: { motor1: "1 · CCW", motor2: "2 · CCW", motor3: "3 · CW", motor4: "4 · CW", prop1: "CCW", prop2: "CCW", prop3: "CW", prop4: "CW" },
+  steps: [
+    { label: "Carbon frame and rails", parts: ["frame", "hardware", "rails_rubber", "antenna_holder"], from: "down", stagger: 0.1 },
+    { label: "Landing gear clips on underneath", parts: ["landing_gear", "landing_foam", "landing_rubber"], from: "down", distance: 0.15, stagger: 0.1 },
+    { label: "Motor mounts go on the arm ends", parts: "motor?_base", from: "out", distance: 0.15, stagger: 0.15 },
+    { label: "Motors drop onto the mounts (PX4 order)", parts: ["motor1", "motor2", "motor3", "motor4"], from: "up", distance: 0.15, stagger: 0.35, callout: true },
+    { label: "Flight controller on its dampers", parts: ["fc_dampers", "fc"], from: "up", distance: 0.18, stagger: 0.25, camera: { focus: "fc", zoom: 2.2 } },
+    { action: "camera", label: "Back out", camera: { zoom: 1 } },
+    { label: "Props: CCW on 1 and 2, CW on 3 and 4", parts: ["prop1", "prop2", "prop3", "prop4"], from: "up", distance: 0.12, spin: { axis: "y", turns: 2 }, stagger: 0.25, callout: true }
+  ]
+}`,
   'Motors drop onto arms (with labels)': `{
   type: "assembly3d",
   model: "placeholder-quad",
@@ -138,6 +153,13 @@ function parseCfg() {
 function run() {
   const cfg = parseCfg(); if (!cfg) return;
   if (!cfg.model) cfg.model = $('#modelSel').value;
+  if (LAZY[cfg.model] && !Assembly3D.models[cfg.model]) {
+    $('#err').textContent = 'Loading ' + cfg.model + ' model (' + LAZY[cfg.model] + ')…';
+    const el = document.createElement('script'); el.src = LAZY[cfg.model];
+    el.onload = () => { $('#err').textContent = ''; listModels(); $('#modelSel').value = cfg.model; run(); };
+    el.onerror = () => { $('#err').textContent = 'Could not load ' + LAZY[cfg.model] + '. Is the examples/ folder next to this page?'; };
+    document.head.appendChild(el); return;
+  }
   if (player && currentModelKey === cfg.model) { player.setConfig(cfg); showIssues(); return; }
   if (player) player.destroy();
   currentModelKey = cfg.model;

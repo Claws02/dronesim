@@ -36,6 +36,7 @@ Send someone the folder (or just `index.html`) and they open it in a browser. Th
 - **`assembly-studio.html`**: open a `.glb`, see every part name and size, click parts to identify them, edit an animation and watch it live, and export an offline model file.
 - **`tools/glb-to-js.mjs`**: `node tools/glb-to-js.mjs drone.glb drone --out models/drone.glb.js` wraps a CAD export for offline use (`--list` prints part names).
 - Until real CAD arrives, a procedural placeholder quad (`models/placeholder-quad.js`) uses realistic part names.
+- **Tested on real CAD:** `examples/x500/` is the Holybro X500 from PX4's official Gazebo models (BSD-3). Pick "Real CAD: Holybro X500" in Assembly Studio's examples. See *Lessons from testing with real CAD* in the animation guide.
 
 ## Editing the content
 

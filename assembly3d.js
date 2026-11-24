@@ -177,7 +177,13 @@ function mount(container, config, opts) {
   /* ---------- load */
   self.ready = loadModel(cfg.model || opts.model).then(obj => {
     if (destroyed) return self;
-    root = obj; scene.add(root); root.updateMatrixWorld(true);
+    root = obj;
+    if (!(cfg.modelLights)) {                                   // CAD/Blender exports often carry scene lights & cameras: drop them
+      const extras = []; root.traverse(o => { if (o.isLight || o.isCamera) extras.push(o); });
+      extras.forEach(o => o.parent && o.parent.remove(o));
+      if (extras.length) console.info(`[assembly3d] ignored ${extras.length} light/camera node(s) embedded in the model (set modelLights: true to keep them)`);
+    }
+    scene.add(root); root.updateMatrixWorld(true);
     indexParts();
     msg.textContent = '';
     applyConfig(cfg);

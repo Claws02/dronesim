@@ -42,6 +42,12 @@ const exts = gltf.extensionsUsed || [];
 console.log(`Model: ${file}  (${(buf.length / 1024).toFixed(0)} KB, ${nodes.length} nodes, ${named.length} named)`);
 if (exts.includes('KHR_draco_mesh_compression')) console.warn('⚠ Uses Draco compression, which this player does not include. Re-export without Draco (Meshopt or no compression is fine).');
 if (dupes.length) console.warn(`⚠ Duplicate node names (only the first of each is addressable): ${[...new Set(dupes)].slice(0, 15).join(', ')}`);
+const mats = gltf.materials || [];
+const white = mats.filter(m => { const pbr = m.pbrMetallicRoughness || {}; const c = pbr.baseColorFactor; return !pbr.baseColorTexture && (!c || (c[0] > 0.97 && c[1] > 0.97 && c[2] > 0.97)); }).map(m => m.name || '(unnamed)');
+if (white.length) console.warn(`⚠ ${white.length} material(s) will render plain white (no colour and no texture): ${white.slice(0, 8).join(', ')}. Usually a texture got lost in export. Set a base colour in CAD/Blender if white isn't intended.`);
+const nLights = ((gltf.extensions || {}).KHR_lights_punctual || {}).lights?.length || 0, nCams = (gltf.cameras || []).length;
+if (nLights || nCams) console.warn(`ℹ Contains ${nLights} light(s) and ${nCams} camera(s) from the CAD/Blender scene. The player ignores them, but removing them in the export keeps the file clean.`);
+if (buf.length > 8e6) console.warn(`⚠ ${(buf.length / 1e6).toFixed(1)} MB is heavy for a guide. Shrink it first (keeps part names): see "Shrinking a heavy model" in ASSEMBLY_ANIMATION_GUIDE.md.`);
 if (unnamed) console.warn(`ℹ ${unnamed} unnamed nodes. Name the parts you want to animate in your CAD/Blender export.`);
 
 if (list) {
