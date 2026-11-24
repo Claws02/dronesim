@@ -110,7 +110,7 @@ When adapting it for an organisation:
 
 ## 3D assembly animations
 
-If the materials include a 3D model (GLB from CAD), add `assembly3d` diagrams to the build steps. Follow **[ASSEMBLY_ANIMATION_GUIDE.md](ASSEMBLY_ANIMATION_GUIDE.md)**: convert the model with `node tools/glb-to-js.mjs`, list its part names with `--list`, then write `steps` using those names. Until a real model exists, the template uses the procedural `placeholder-quad`.
+If the materials include a 3D model, add `assembly3d` diagrams to the build steps. Follow **[ASSEMBLY_ANIMATION_GUIDE.md](ASSEMBLY_ANIMATION_GUIDE.md)**: convert STEP files with `node tools/step-to-glb.mjs` (GLB files skip this), wrap and list part names with `node tools/glb-to-js.mjs`, then write `steps` using those names. **Map CAD motor names to PX4 numbers from their positions** (`examples/f450/` shows how), and never assume the CAD numbering matches. Until a real model exists, the template uses the procedural `placeholder-quad`.
 
 ## Workflow to follow
 

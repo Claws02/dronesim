@@ -69,8 +69,23 @@ kbd{font:11px var(--mono);border:1px solid var(--line2);border-radius:4px;paddin
 <script>
 (function () {
 const $ = s => document.querySelector(s);
-const LAZY = { x500: 'examples/x500/x500.glb.js' };   // real-CAD models loaded only when an example needs them
+const LAZY = { x500: 'examples/x500/x500.glb.js', f450: 'examples/f450/f450.glb.js' };   // real-CAD models loaded only when an example needs them
 const EXAMPLES = {
+  'Real CAD (STEP): F450 frame, CAD → PX4 motor numbers': `{
+  type: "assembly3d",
+  model: "f450",
+  // CAD body names differ from PX4 numbering. labels translate them (red arms = front)
+  labels: { Motor1: "PX4 1 · CCW", Motor3: "PX4 2 · CCW", Motor2: "PX4 3 · CW", Motor4: "PX4 4 · CW", Arm1: "FRONT", Arm2: "FRONT" },
+  steps: [
+    { label: "Bottom plate (it's also the power board) goes down first", parts: "Bottom", from: "down", distance: 80 },
+    { label: "Screw the four arms on. The red arms go at the front", parts: ["Arm1", "Arm2", "Arm3", "Arm4"], from: "out", distance: 120, stagger: 0.2 },
+    { label: "Red arms = front of the drone", action: "highlight", parts: ["Arm1", "Arm2"], callout: true },
+    { label: "Centre stack and top plate", parts: ["Body7", "Top"], from: "up", distance: 90, stagger: 0.25 },
+    { label: "Landing legs clip under the arms", parts: "Leg?", from: "down", distance: 70, stagger: 0.15 },
+    { label: "Motors on the arm tips, in PX4 order 1 → 4", parts: ["Motor1", "Motor3", "Motor2", "Motor4"], from: "up", distance: 80, spin: { axis: "y", turns: 1 }, stagger: 0.45, callout: true },
+    { label: "Battery on top, long side front to back", parts: "Battery", from: "up", distance: 90, ease: "snap" }
+  ]
+}`,
   'Real CAD: Holybro X500 (PX4 Gazebo model)': `{
   type: "assembly3d",
   model: "x500",
