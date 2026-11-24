@@ -111,6 +111,35 @@ Also tested with the **Holybro X500** from PX4's official Gazebo models (`exampl
 4. Y-up, front = −Z (glTF default), or tell the guide which way is up/front.
 5. Binary GLB, then shrink it (above) and run `node tools/glb-to-js.mjs your.glb --list` before writing animations.
 
+## Making it look real
+
+The player renders with studio lighting, colour-accurate tone mapping and a soft **contact shadow** that follows moving parts. To make a plain CAD export look like the real product, map part names to **material presets**. No texture files or geometry changes are needed:
+
+```js
+materials: {
+  "frame*": "carbon",                                   // carbon-fibre weave with clear coat
+  "Motor?": "black-metal",
+  "Arm?":   "glossy-plastic",                           // keeps the CAD colour (e.g. red front arms)
+  "Bottom": { preset: "pcb", color: "#1b1d22" },        // override the colour
+  "Battery": "lipo"
+}
+```
+
+| Preset | Looks like | Takes a colour |
+|---|---|---|
+| `carbon` | Carbon-fibre twill weave, clear coat | no |
+| `aluminum`, `anodized`, `black-metal` | Brushed metal (anodized default red) | yes |
+| `steel`, `copper` | Polished metal | steel: yes |
+| `plastic`, `glossy-plastic`, `rubber` | Matte / glossy moulded plastic, rubber | yes |
+| `pcb` | Circuit board with traces | yes |
+| `lipo` | Battery shrink-wrap | yes |
+| `prop` | Polycarbonate propeller | yes |
+| `lens` | Camera glass | no |
+
+Presets that take a colour **keep the part's CAD colour** unless you give one. Procedural models can tag meshes directly: `mesh.userData.preset = "carbon"` or `{ preset: "anodized", color: 0xd8342c }`.
+
+**Performance:** phones start on low quality (lower resolution, shadow refreshed 4×/s, no clear coat). Any device that plays slowly steps down automatically (high → low → minimal). Keep models under ~50k triangles: the rebuilt placeholder is ~18k, the F450 1.3k.
+
 ## Config reference
 
 ### Top level
@@ -133,6 +162,9 @@ Also tested with the **Holybro X500** from PX4's official Gazebo models (`exampl
 | `loopDelay` | 1.8 | Pause (s) before the loop restarts |
 | `ground` | true | Soft shadow under the model |
 | `modelLights` | false | Keep lights/cameras embedded in the model (normally they're ignored) |
+| `materials` | none | Realistic material presets by part name, e.g. `{ "Arm*": "carbon", "Motor?": "black-metal" }`. See *Making it look real* |
+| `quality` | auto | `"high"`, `"low"` or `"minimal"`. Leave unset: it starts high on computers and low on phones/tablets, then steps down automatically if playback is slow |
+| `shadowOpacity` | 0.8 | Darkness of the soft contact shadow (`ground: false` removes it) |
 
 ### Step fields
 

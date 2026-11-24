@@ -76,6 +76,9 @@ const EXAMPLES = {
   model: "f450",
   // CAD body names differ from PX4 numbering. labels translate them (red arms = front)
   labels: { Motor1: "PX4 1 · CCW", Motor3: "PX4 2 · CCW", Motor2: "PX4 3 · CW", Motor4: "PX4 4 · CW", Arm1: "FRONT", Arm2: "FRONT" },
+  // realistic materials by part name (colour comes from the CAD unless given)
+  materials: { "Arm?": "glossy-plastic", "Leg?": "plastic", "Bottom": { preset: "pcb", color: "#1b1d22" }, "Top": { preset: "pcb", color: "#1b1d22" },
+               "Body7": "plastic", "Motor?": "black-metal", "Battery": "lipo" },
   steps: [
     { label: "Bottom plate (it's also the power board) goes down first", parts: "Bottom", from: "down", distance: 80 },
     { label: "Screw the four arms on. The red arms go at the front", parts: ["Arm1", "Arm2", "Arm3", "Arm4"], from: "out", distance: 120, stagger: 0.2 },
@@ -89,6 +92,7 @@ const EXAMPLES = {
   'Real CAD: Holybro X500 (PX4 Gazebo model)': `{
   type: "assembly3d",
   model: "x500",
+  materials: { "frame": "carbon", "hardware": "aluminum", "motor?": "black-metal", "motor?_base": "black-metal", "prop?": "prop", "landing_gear": "plastic", "fc": "glossy-plastic" },
   labels: { motor1: "1 · CCW", motor2: "2 · CCW", motor3: "3 · CW", motor4: "4 · CW", prop1: "CCW", prop2: "CCW", prop3: "CW", prop4: "CW" },
   steps: [
     { label: "Carbon frame and rails", parts: ["frame", "hardware", "rails_rubber", "antenna_holder"], from: "down", stagger: 0.1 },
