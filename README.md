@@ -35,8 +35,13 @@ Send someone the folder (or just `index.html`) and they open it in a browser. Th
 - **[ASSEMBLY_ANIMATION_GUIDE.md](ASSEMBLY_ANIMATION_GUIDE.md)** is the full spec. Animations are plain data: "insert `motor*` from `up`, stagger 0.3 s".
 - **`assembly-studio.html`**: open a `.glb`, see every part name and size, click parts to identify them, edit an animation and watch it live, and export an offline model file.
 - **`tools/glb-to-js.mjs`**: `node tools/glb-to-js.mjs drone.glb drone --out models/drone.glb.js` wraps a CAD export for offline use (`--list` prints part names).
-- Until real CAD arrives, a procedural placeholder quad (`models/placeholder-quad.js`) uses realistic part names.
-- **Tested on real CAD:** `examples/x500/` is the Holybro X500 from PX4's official Gazebo models (BSD-3). Pick "Real CAD: Holybro X500" in Assembly Studio's examples. See *Lessons from testing with real CAD* in the animation guide.
+- Until real CAD arrives, a realistic procedural placeholder quad (`models/placeholder-quad.js`) stands in, with real part names. It has a carbon frame, motors with vents, twisted props, a Pixhawk-style FC, a camera, a VTX and a LiPo.
+- Realistic rendering for any model: studio lighting, soft contact shadows, and **material presets by part name** (`materials: { "Arm*": "carbon" }`). Quality adapts automatically for phones and slow computers.
+- **`tools/step-to-glb.mjs`**: converts **STEP** files straight from CAD into an animatable GLB, keeping part names (`npm install occt-import-js` once).
+- **Tested on real CAD:**
+  - `examples/f450/`: an F450 frame from a real Fusion STEP (MIT). Every body is named, so each piece moves on its own. **This is the best reference.**
+  - `examples/x500/`: the Holybro X500 from PX4's official Gazebo models (BSD-3).
+  - Both are in Assembly Studio's examples list. See *Lessons from testing with real CAD* in the animation guide.
 
 ## Editing the content
 

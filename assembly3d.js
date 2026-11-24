@@ -35,6 +35,127 @@ const D2R = Math.PI / 180;
 const ACCENT = 0xffb020;
 const live = new Set();
 
+/* ------------------------------------------------------------------ realistic material presets
+   Procedural (no texture files), shared textures, private material per mesh so parts can still fade/glow.
+   Use from a builder:  mesh.userData.preset = "carbon"  or  { preset: "anodized", color: 0xd8342c }
+   Use from a config:   materials: { "Arm*": "carbon", "Motor*": { preset: "anodized", color: "#222" } }
+   Presets that take a colour keep the part's own CAD colour unless one is given. */
+const TEX = {};
+function canvasTex(key, size, draw, srgb) {
+  if (TEX[key]) return TEX[key];
+  const c = document.createElement('canvas'); c.width = c.height = size; draw(c.getContext('2d'), size);
+  const t = new T.CanvasTexture(c); t.wrapS = t.wrapT = T.RepeatWrapping; t.anisotropy = 4;
+  if (srgb) t.colorSpace = T.SRGBColorSpace;
+  return (TEX[key] = t);
+}
+const weaveTex = () => canvasTex('weave', 256, (g, n) => {          // 2x2 twill carbon weave
+  const k = 8, w = n / k;
+  for (let i = 0; i < k; i++) for (let j = 0; j < k; j++) {
+    const horiz = ((i + j) >> 1) % 2 === 0, x = i * w, y = j * w;
+    const grd = horiz ? g.createLinearGradient(x, y, x, y + w) : g.createLinearGradient(x, y, x + w, y);
+    grd.addColorStop(0, '#0e0f11'); grd.addColorStop(0.5, horiz ? '#3a3d42' : '#2a2c30'); grd.addColorStop(1, '#0e0f11');
+    g.fillStyle = grd; g.fillRect(x, y, w, w);
+    g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 1;
+    for (let f = 1; f < 4; f++) { g.beginPath(); if (horiz) { g.moveTo(x, y + f * w / 4); g.lineTo(x + w, y + f * w / 4); } else { g.moveTo(x + f * w / 4, y); g.lineTo(x + f * w / 4, y + w); } g.stroke(); }
+  }
+}, true);
+const brushedTex = () => canvasTex('brushed', 256, (g, n) => {      // roughness map: fine directional streaks
+  g.fillStyle = '#8c8c8c'; g.fillRect(0, 0, n, n);
+  for (let i = 0; i < 900; i++) { const v = 110 + Math.random() * 60 | 0; g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(0, Math.random() * n, n, 0.6 + Math.random()); }
+});
+const pcbTex = () => canvasTex('pcb', 256, (g, n) => {              // subtle traces + pads, multiplied by the board colour
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, n, n);
+  g.strokeStyle = 'rgba(255,255,255,.0)';
+  for (let i = 0; i < 70; i++) {
+    g.strokeStyle = `rgba(${200 + Math.random() * 40 | 0},${210 + Math.random() * 40 | 0},${190 + Math.random() * 40 | 0},1)`;
+    g.lineWidth = 1 + Math.random() * 2; g.beginPath(); let x = Math.random() * n, y = Math.random() * n; g.moveTo(x, y);
+    for (let s = 0; s < 3; s++) { if (Math.random() < 0.5) x += (Math.random() - .5) * 120; else y += (Math.random() - .5) * 120; g.lineTo(x, y); } g.stroke();
+  }
+  g.fillStyle = '#d9b44a'; for (let i = 0; i < 40; i++) g.fillRect(Math.random() * n, Math.random() * n, 3, 3);
+}, true);
+const PRESETS = {
+  carbon:        () => new T.MeshPhysicalMaterial({ color: 0xffffff, map: weaveTex(), roughness: 0.45, metalness: 0.15, clearcoat: 1, clearcoatRoughness: 0.12 }),
+  aluminum:      c => new T.MeshStandardMaterial({ color: c ?? 0xc9ced6, metalness: 1, roughness: 0.3, roughnessMap: brushedTex() }),
+  anodized:      c => new T.MeshStandardMaterial({ color: c ?? 0xd8342c, metalness: 0.85, roughness: 0.32, roughnessMap: brushedTex() }),
+  steel:         c => new T.MeshStandardMaterial({ color: c ?? 0xa4aab2, metalness: 1, roughness: 0.22 }),
+  'black-metal': c => new T.MeshStandardMaterial({ color: c ?? 0x2a2c30, metalness: 0.8, roughness: 0.38, roughnessMap: brushedTex() }),
+  copper:        () => new T.MeshStandardMaterial({ color: 0xc8794a, metalness: 1, roughness: 0.3 }),
+  plastic:       c => new T.MeshStandardMaterial({ color: c ?? 0x3a3f46, metalness: 0, roughness: 0.62 }),
+  'glossy-plastic': c => new T.MeshPhysicalMaterial({ color: c ?? 0xf2f2f2, metalness: 0, roughness: 0.3, clearcoat: 0.6, clearcoatRoughness: 0.2 }),
+  rubber:        c => new T.MeshStandardMaterial({ color: c ?? 0x16171a, metalness: 0, roughness: 0.92 }),
+  pcb:           c => new T.MeshStandardMaterial({ color: c ?? 0x1d6b3e, map: pcbTex(), metalness: 0.1, roughness: 0.42 }),
+  lipo:          c => new T.MeshPhysicalMaterial({ color: c ?? 0x2b5fb3, metalness: 0, roughness: 0.28, clearcoat: 0.8, clearcoatRoughness: 0.15 }),
+  lens:          () => new T.MeshPhysicalMaterial({ color: 0x0a1626, metalness: 0.4, roughness: 0.04, clearcoat: 1, clearcoatRoughness: 0 }),
+  prop:          c => new T.MeshPhysicalMaterial({ color: c ?? 0x2f8fff, metalness: 0, roughness: 0.32, clearcoat: 0.5, clearcoatRoughness: 0.25 })
+};
+function makePreset(spec, keepColor, low) {
+  const o = typeof spec === 'string' ? { preset: spec } : (spec || {});
+  const f = PRESETS[o.preset]; if (!f) return null;
+  const col = o.color != null ? new T.Color(o.color) : (keepColor || undefined);
+  let m = f(col);
+  if (low && m.isMeshPhysicalMaterial) {                              // low quality: drop clearcoat, keep colour/texture
+    const s = new T.MeshStandardMaterial({ color: m.color, map: m.map, roughness: m.roughness, metalness: m.metalness, roughnessMap: m.roughnessMap }); m.dispose(); m = s;
+  }
+  m.name = 'preset:' + o.preset; m.userData.textured = !!(m.map || m.roughnessMap);
+  return m;
+}
+/* box-projected UVs so procedural textures work on any mesh (CAD meshes often have none) */
+function boxUV(mesh, density) {
+  const g = mesh.geometry; if (!g || !g.attributes.position) return;
+  const ws = mesh.getWorldScale(new T.Vector3()), key = density.toFixed(6) + '|' + ws.x.toFixed(5);
+  if (g.userData.a3dUV === key) return;
+  if (!g.attributes.normal) g.computeVertexNormals();
+  const p = g.attributes.position, nrm = g.attributes.normal, uv = new Float32Array(p.count * 2);
+  for (let i = 0; i < p.count; i++) {
+    const nx = Math.abs(nrm.getX(i)), ny = Math.abs(nrm.getY(i)), nz = Math.abs(nrm.getZ(i));
+    const x = p.getX(i) * ws.x * density, y = p.getY(i) * ws.y * density, z = p.getZ(i) * ws.z * density;
+    if (nx >= ny && nx >= nz) { uv[2 * i] = z; uv[2 * i + 1] = y; } else if (ny >= nz) { uv[2 * i] = x; uv[2 * i + 1] = z; } else { uv[2 * i] = x; uv[2 * i + 1] = y; }
+  }
+  g.setAttribute('uv', new T.BufferAttribute(uv, 2)); g.userData.a3dUV = key;
+}
+
+/* soft contact shadow: top-down depth render, blurred. Follows moving parts; cheap enough for phones. */
+const BLUR_FRAG = dir => `uniform sampler2D tDiffuse; uniform float d; varying vec2 vUv;
+void main(){ vec4 s=vec4(0.0); vec2 o=${dir};
+ s+=texture2D(tDiffuse,vUv-4.0*o*d)*0.051; s+=texture2D(tDiffuse,vUv-3.0*o*d)*0.0918; s+=texture2D(tDiffuse,vUv-2.0*o*d)*0.12245; s+=texture2D(tDiffuse,vUv-o*d)*0.1531;
+ s+=texture2D(tDiffuse,vUv)*0.1633; s+=texture2D(tDiffuse,vUv+o*d)*0.1531; s+=texture2D(tDiffuse,vUv+2.0*o*d)*0.12245; s+=texture2D(tDiffuse,vUv+3.0*o*d)*0.0918; s+=texture2D(tDiffuse,vUv+4.0*o*d)*0.051;
+ gl_FragColor=s; }`;
+const BLUR_VERT = 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }';
+function contactShadow(renderer, res, size, height, opacity) {
+  const rt = new T.WebGLRenderTarget(res, res), rtB = new T.WebGLRenderTarget(res, res);
+  rt.texture.generateMipmaps = rtB.texture.generateMipmaps = false;
+  const group = new T.Group(); group.name = 'a3d_contact_shadow';
+  const geo = new T.PlaneGeometry(size, size).rotateX(Math.PI / 2);
+  const plane = new T.Mesh(geo, new T.MeshBasicMaterial({ map: rt.texture, opacity, transparent: true, depthWrite: false }));
+  plane.renderOrder = 1; plane.scale.y = -1; group.add(plane);
+  const blurPlane = new T.Mesh(geo); blurPlane.visible = false; group.add(blurPlane);
+  const cam = new T.OrthographicCamera(-size / 2, size / 2, size / 2, -size / 2, 0, height); cam.rotation.x = Math.PI / 2; group.add(cam);
+  const depth = new T.MeshDepthMaterial(); depth.userData.darkness = { value: 1.6 }; depth.depthTest = depth.depthWrite = false;
+  depth.onBeforeCompile = sh => { sh.uniforms.darkness = depth.userData.darkness;
+    sh.fragmentShader = 'uniform float darkness;\n' + sh.fragmentShader.replace('gl_FragColor = vec4( vec3( 1.0 - fragCoordZ ), opacity );', 'gl_FragColor = vec4( vec3( 0.0 ), ( 1.0 - fragCoordZ ) * darkness );'); };
+  const hB = new T.ShaderMaterial({ uniforms: { tDiffuse: { value: null }, d: { value: 0 } }, vertexShader: BLUR_VERT, fragmentShader: BLUR_FRAG('vec2(1.0,0.0)'), depthTest: false });
+  const vB = new T.ShaderMaterial({ uniforms: { tDiffuse: { value: null }, d: { value: 0 } }, vertexShader: BLUR_VERT, fragmentShader: BLUR_FRAG('vec2(0.0,1.0)'), depthTest: false });
+  const blur = amt => {
+    blurPlane.visible = true;
+    blurPlane.material = hB; hB.uniforms.tDiffuse.value = rt.texture; hB.uniforms.d.value = amt / res; renderer.setRenderTarget(rtB); renderer.render(blurPlane, cam);
+    blurPlane.material = vB; vB.uniforms.tDiffuse.value = rtB.texture; vB.uniforms.d.value = amt / res; renderer.setRenderTarget(rt); renderer.render(blurPlane, cam);
+    blurPlane.visible = false;
+  };
+  return {
+    group,
+    update(scene, hide) {
+      const bg = scene.background, alpha = renderer.getClearAlpha(), old = renderer.getRenderTarget();
+      scene.background = null; plane.visible = false; hide.forEach(o => { o.userData.a3dWasVis = o.visible; o.visible = false; });
+      scene.overrideMaterial = depth; renderer.setClearAlpha(0);
+      renderer.setRenderTarget(rt); renderer.clear(); renderer.render(scene, cam);
+      scene.overrideMaterial = null; blur(2.2); blur(0.9);
+      renderer.setRenderTarget(old); renderer.setClearAlpha(alpha); scene.background = bg; plane.visible = true;
+      hide.forEach(o => { o.visible = o.userData.a3dWasVis; });
+    },
+    dispose() { rt.dispose(); rtB.dispose(); geo.dispose(); plane.material.dispose(); depth.dispose(); hB.dispose(); vB.dispose(); }
+  };
+}
+
 /* ------------------------------------------------------------------ styles (injected once) */
 function injectCSS() {
   if (document.getElementById('a3d-css')) return;
@@ -72,7 +193,7 @@ function loadModel(spec) {
   if (spec && typeof spec === 'object' && spec.buffer) {           // { buffer: ArrayBuffer } from a dropped file
     return new Promise((res, rej) => { const l = gltfLoader(); l.parse(spec.buffer, '', g => res(g.scene), rej); });
   }
-  if (typeof spec === 'string' && BUILDERS[spec]) return Promise.resolve(BUILDERS[spec](T));
+  if (typeof spec === 'string' && BUILDERS[spec]) return Promise.resolve(BUILDERS[spec](T, { preset: makePreset, presets: Object.keys(PRESETS) }));
   const src = MODELS[spec] || spec;
   if (!src) return Promise.reject(new Error('No model specified.'));
   if (!modelCache.has(src)) {
@@ -138,14 +259,22 @@ function mount(container, config, opts) {
   let renderer;
   try { renderer = new T.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: !!opts.preserveDrawingBuffer }); }
   catch (e) { msg.textContent = '3D view unavailable: this browser or computer has WebGL turned off.'; return { ready: Promise.reject(e), destroy() {} }; }
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  const coarse = window.matchMedia && matchMedia('(pointer: coarse)').matches;           // phones/tablets start at lower resolution
+  let quality = opts.quality || cfg0.quality || (coarse ? 'low' : 'high');
+  const applyQuality = () => renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, quality === 'high' ? 2 : 1.25));
+  applyQuality();
   renderer.outputColorSpace = T.SRGBColorSpace;
-  renderer.toneMapping = T.ACESFilmicToneMapping;
+  renderer.toneMapping = T.NeutralToneMapping || T.ACESFilmicToneMapping;   // keeps CAD colours true
+  renderer.toneMappingExposure = 1.0;
   const scene = new T.Scene();
   const pmrem = new T.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new T.RoomEnvironment(), 0.04).texture;
-  const sun = new T.DirectionalLight(0xffffff, 1.4); sun.position.set(3, 6, 4); scene.add(sun);
-  scene.add(new T.HemisphereLight(0xdde8ff, 0x332a20, 0.5));
+  scene.environmentIntensity = 0.85;
+  /* studio lighting: warm key, cool fill, white rim (positions are re-scaled to the model in applyConfig) */
+  const lights = { key: new T.DirectionalLight(0xfff1e0, 2.0), fill: new T.DirectionalLight(0xdbe6ff, 0.55), rim: new T.DirectionalLight(0xffffff, 1.3) };
+  Object.values(lights).forEach(l => scene.add(l, l.target));
+  scene.add(new T.HemisphereLight(0xe8eeff, 0x2a241c, 0.35));
+  let shadow = null, shadowT = -1, shadowAt = 0, frames = 0, frameTimeSum = 0;
   const camera = new T.PerspectiveCamera(cfg0.fov || 35, 1, 0.01, 1000);
   const controls = new T.OrbitControls(camera, canvas);
   controls.enableDamping = true; controls.dampingFactor = 0.08;
@@ -168,7 +297,7 @@ function mount(container, config, opts) {
   };
   function fitDistance() {                                                   // fits both the vertical and the horizontal field of view
     const vf = camera.fov * D2R, hf = 2 * Math.atan(Math.tan(vf / 2) * camera.aspect);
-    return ctx.radius / Math.sin(Math.min(vf, hf) / 2) * 0.95;
+    return ctx.radius / Math.sin(Math.min(vf, hf) / 2) * (camera.aspect < 1 ? 1.0 : 0.82);   // portrait phones need more room
   }
   const ro = new ResizeObserver(resize); ro.observe(stage);
   const io = new IntersectionObserver(es => { visible = es.some(e => e.isIntersecting); }); io.observe(stage);
@@ -224,13 +353,37 @@ function mount(container, config, opts) {
     trails.forEach(tr => { scene.remove(tr.obj); tr.obj.traverse(x => { if (x.geometry) x.geometry.dispose(); if (x.material) x.material.dispose(); }); });
     trails = []; tracked = new Map();
     callouts.forEach(c => c.el.remove()); callouts = [];
-    if (ground) { scene.remove(ground); ground.geometry.dispose(); ground.material.map.dispose(); ground.material.dispose(); ground = null; }
+    if (ground) { scene.remove(ground); if (shadow) { shadow.dispose(); shadow = null; } ground = null; }
     root.updateMatrixWorld(true);
+  }
+
+  function applyMaterials() {
+    root.traverse(o => { if (o.isMesh && o.userData.a3dOrigMat) { o.material = o.userData.a3dOrigMat; delete o.userData.a3dOrigMat; } });
+    const jobs = [];
+    root.traverse(o => { if (o.isMesh && o.userData.preset) jobs.push([o, o.userData.preset]); });   // tagged by builders
+    Object.entries(cfg.materials || {}).forEach(([pat, spec]) => {
+      const hits = resolve(pat, self.issues, 'materials');
+      hits.forEach(h => h.traverse(o => { if (o.isMesh) jobs.push([o, spec]); }));
+      const name = typeof spec === 'string' ? spec : spec && spec.preset;
+      if (!PRESETS[name]) self.issues.push(`materials: unknown preset "${name}" (use ${Object.keys(PRESETS).join(', ')})`);
+    });
+    if (!jobs.length) return;
+    const rb = new T.Box3().setFromObject(root), density = 40 / Math.max(rb.getSize(tmpV).length(), 1e-6);   // ~40 weave tiles across the model
+    jobs.forEach(([o, spec]) => {
+      const cur = asList(o.material)[0], keep = cur && cur.color ? cur.color.clone() : null;
+      const m = makePreset(spec, keep, quality !== 'high'); if (!m) return;
+      if (!o.userData.a3dOrigMat) o.userData.a3dOrigMat = o.material;
+      m.userData.a3d = { opacity: m.opacity, transparent: m.transparent, depthWrite: m.depthWrite, emissive: m.emissive ? m.emissive.clone() : null, ei: m.emissiveIntensity };
+      if (cur) m.side = cur.side;                                    // e.g. double-sided props
+      o.material = m;
+      if (m.userData.textured) boxUV(o, density);
+    });
   }
 
   function applyConfig(newCfg) {
     cfg = newCfg || {}; resetPose();
     const issues = self.issues = [];
+    applyMaterials();
     if (cfg.steps != null && !Array.isArray(cfg.steps)) issues.push('"steps" must be an array');
     const steps = Array.isArray(cfg.steps) ? cfg.steps : [];
 
@@ -270,15 +423,17 @@ function mount(container, config, opts) {
     camera.near = radius / 100; camera.far = radius * 100; camera.updateProjectionMatrix();
     controls.minDistance = radius * 0.3; controls.maxDistance = radius * 12;
 
-    /* soft ground shadow */
+    /* studio lights placed relative to the model and camera framing */
+    const place = (l, f, r, u) => { l.position.copy(center).addScaledVector(ctx.front, f * radius * 4).addScaledVector(ctx.right, r * radius * 4).addScaledVector(ctx.up, u * radius * 4); l.target.position.copy(center); };
+    place(lights.key, 0.9, 1.0, 1.4); place(lights.fill, 0.6, -1.2, 0.5); place(lights.rim, -1.3, -0.3, 0.9);
+
+    /* soft contact shadow under the model (follows moving parts) */
     if (cfg.ground !== false) {
-      const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
-      const grd = g.createRadialGradient(64, 64, 4, 64, 64, 64); grd.addColorStop(0, 'rgba(0,0,0,0.45)'); grd.addColorStop(1, 'rgba(0,0,0,0)');
-      g.fillStyle = grd; g.fillRect(0, 0, 128, 128);
-      ground = new T.Mesh(new T.PlaneGeometry(radius * 2.6, radius * 2.6), new T.MeshBasicMaterial({ map: new T.CanvasTexture(c), transparent: true, depthWrite: false }));
-      ground.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), ctx.up);
-      const low = box.min.clone(); ground.position.copy(center).addScaledVector(ctx.up, (low.sub(center)).dot(ctx.up) - radius * 0.01);
-      scene.add(ground);
+      const low = box.min.clone().sub(center).dot(ctx.up);
+      shadow = contactShadow(renderer, quality === 'high' ? 512 : 256, radius * 3, radius * 2.2, cfg.shadowOpacity ?? 0.8);
+      shadow.group.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), ctx.up);
+      shadow.group.position.copy(center).addScaledVector(ctx.up, low - radius * 0.005);
+      ground = shadow.group; scene.add(ground); shadowT = -1;
     }
 
     /* compile the timeline */
@@ -510,7 +665,21 @@ function mount(container, config, opts) {
     }
     controls.update();
     placeCallouts(t);
+    if (shadow && t !== shadowT && now - shadowAt > ({ high: 0, low: 250, minimal: 1000 }[quality] ?? 250)) {   // re-shadow only when parts moved
+      shadow.update(scene, trails.map(tr => tr.obj)); shadowT = t; shadowAt = now;
+    }
     renderer.render(scene, camera);
+    /* adaptive quality, two stages: high → low (lower resolution, shadow 4×/s, no clearcoat on new materials)
+       → minimal (shadow refreshed once a second) if the device still averages below ~25 fps */
+    if (quality !== 'minimal' && frames < 120 && !opts.quality && !cfg.quality) {
+      frames++; if (frames > 20) frameTimeSum += dt;
+      if (frames === 120) {
+        const avg = frameTimeSum / 100; frames = 0; frameTimeSum = 0;
+        if (quality === 'high' && avg > 0.028) { quality = 'low'; applyQuality(); resize(); console.info('[assembly3d] switched to low quality for smoother playback'); }
+        else if (quality === 'low' && avg > 0.04) { quality = 'minimal'; console.info('[assembly3d] switched to minimal quality (slow device)'); }
+        else frames = 120;                                                   // fast enough: stop measuring
+      }
+    }
   }
 
   /* ---------- UI events */
@@ -542,10 +711,11 @@ function mount(container, config, opts) {
     seek, goStep, get time() { return t; }, get playing() { return playing; },
     setConfig: c => { if (root) applyConfig(c); else cfg = c; },
     flash(name) { const objs = resolve(name); objs.forEach(o => o.traverse(m => { if (m.isMesh) asList(m.material).forEach(mt => { if (mt.emissive) { mt.emissive.setHex(ACCENT); mt.emissiveIntensity = 0.9; } }); })); setTimeout(() => evaluate(t), 900); },
+    get quality() { return quality; },
     inspect: () => [...tracked.values()].map(P => ({ name: P.obj.name, visible: P.obj.visible, opacity: +(P.op ?? 1).toFixed(3), glow: +(P.glow || 0).toFixed(2), position: P.obj.position.toArray().map(v => +v.toFixed(2)), segments: P.segs.map(sg => sg.action + '@' + sg.start.toFixed(2) + '+' + sg.dur) })),
     snapshot: () => { renderer.render(scene, camera); return canvas.toDataURL('image/png'); },
     destroy() {
-      if (destroyed) return; destroyed = true; cancelAnimationFrame(raf); ro.disconnect(); io.disconnect(); controls.dispose();
+      if (destroyed) return; destroyed = true; cancelAnimationFrame(raf); if (shadow) { shadow.dispose(); shadow = null; } ro.disconnect(); io.disconnect(); controls.dispose();
       scene.traverse(o => { if (o.geometry) o.geometry.dispose(); asList(o.material).forEach(m => m && m.dispose && m.dispose()); });
       pmrem.dispose(); renderer.dispose(); live.delete(self);
     }
