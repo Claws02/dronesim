@@ -724,8 +724,87 @@ function mount(container, config, opts) {
   return self;
 }
 
+/* ------------------------------------------------------------------ strict config validator (used by tools/qa.mjs)
+   validate(config, partNames) → [{ level: 'error'|'warning', where, msg, fix }]
+   Pure data checks: no WebGL, runs in Node. Stricter than the player: also flags unknown keys (typos). */
+const CFG_KEYS = ['type', 'model', 'steps', 'show', 'hide', 'ghost', 'labels', 'camera', 'front', 'up', 'distance', 'height', 'autoplay', 'loop',
+  'hold', 'loopDelay', 'ground', 'modelLights', 'materials', 'quality', 'shadowOpacity', 'fov', 'debug'];
+const STEP_KEYS = ['label', 'parts', 'action', 'from', 'to', 'distance', 'path', 'rotate', 'spin', 'duration', 'stagger', 'delay', 'with', 'ease',
+  'callout', 'highlight', 'trail', 'hideAfter', 'opacity', 'camera', 'hold'];
+const CAM_KEYS = ['position', 'target', 'direction', 'zoom', 'focus', 'duration'];
+const DIR_WORDS = ['up', 'down', 'left', 'right', 'front', 'forward', 'back', 'rear', 'out', 'in'];
+function closest(word, list) {
+  const d = (a, b) => { a = a.toLowerCase(); b = b.toLowerCase(); const m = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+    for (let j = 1; j <= b.length; j++) m[0][j] = j;
+    for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) m[i][j] = Math.min(m[i - 1][j] + 1, m[i][j - 1] + 1, m[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    return m[a.length][b.length]; };
+  let best = null, bd = Infinity; list.forEach(w => { const x = d(String(word), w); if (x < bd) { bd = x; best = w; } });
+  return bd <= Math.max(2, String(word).length / 3) ? best : null;
+}
+function dirSyntaxOK(spec) {
+  if (Array.isArray(spec)) return spec.length === 3 && spec.every(v => typeof v === 'number' && isFinite(v));
+  if (spec && typeof spec === 'object') return ['x', 'y', 'z'].some(k => typeof spec[k] === 'number');
+  if (typeof spec !== 'string' || !spec.trim()) return false;
+  return spec.toLowerCase().trim().split(/[\s,]+/).every(t => DIR_WORDS.includes(t) || /^([+-]?[xyz])+$/.test(t));
+}
+function validate(cfg, partNames) {
+  const out = [], names = partNames || [];
+  const E = (where, msg, fix) => out.push({ level: 'error', where, msg, fix });
+  const W = (where, msg, fix) => out.push({ level: 'warning', where, msg, fix });
+  const listHint = names.length ? ` Valid part names include: ${names.slice(0, 12).join(', ')}${names.length > 12 ? ', …' : ''}.` : '';
+  const matches = p => { const re = globToRe(p); return names.some(n => re.test(n)); };
+  const checkParts = (where, pats, required) => {
+    const list = asList(pats);
+    if (!list.length) { if (required) E(where, 'needs "parts" (which part or parts to animate)', 'Add parts: "partName" (wildcards like "motor*" are allowed).' + listHint); return; }
+    list.forEach(p => { if (typeof p !== 'string') { E(where, `part name ${JSON.stringify(p)} must be a string`, 'Write part names in quotes.'); return; }
+      if (names.length && !matches(p)) { const c = closest(p, names); E(where, `"${p}" matches no part in the model`, c ? `Did you mean "${c}"?` : 'Use a name from the model\'s part list (run: node tools/qa.mjs --list-parts <model>).' + listHint); } });
+  };
+  const unknownKeys = (obj, allowed, where) => Object.keys(obj).forEach(k => { if (!allowed.includes(k)) { const c = closest(k, allowed); E(where, `unknown key "${k}" (it would be silently ignored)`, c ? `Did you mean "${c}"?` : `Allowed keys: ${allowed.join(', ')}.`); } });
+  if (!cfg || typeof cfg !== 'object') { E('config', 'is not an object', 'An assembly3d diagram must be { type: "assembly3d", model: "...", steps: [ ... ] }.'); return out; }
+  unknownKeys(cfg, CFG_KEYS, 'config');
+  if (!cfg.model) E('config', 'has no "model"', 'Add model: "placeholder-quad" (or the name of a model listed in GUIDE.settings.models).');
+  ['show', 'hide', 'ghost'].forEach(k => { if (cfg[k] != null) checkParts(k, cfg[k], false); });
+  if (cfg.labels) Object.keys(cfg.labels).forEach(k => { if (names.length && !matches(k)) { const c = closest(k, names); W('labels', `label for "${k}", but no part has that name`, c ? `Did you mean "${c}"?` : 'Use the exact part name as the key.'); } });
+  if (cfg.materials) Object.entries(cfg.materials).forEach(([pat, spec]) => {
+    checkParts(`materials["${pat}"]`, pat, false);
+    const nm = typeof spec === 'string' ? spec : spec && spec.preset;
+    if (!PRESETS[nm]) { const c = closest(nm || '', Object.keys(PRESETS)); E(`materials["${pat}"]`, `unknown preset "${nm}"`, (c ? `Did you mean "${c}"? ` : '') + `Presets: ${Object.keys(PRESETS).join(', ')}.`); }
+  });
+  ['front', 'up'].forEach(k => { if (cfg[k] != null && !dirSyntaxOK(cfg[k])) E(k, `can't read direction ${JSON.stringify(cfg[k])}`, 'Use an axis like "-z", "+y" or "-x+z".'); });
+  if (cfg.quality != null && !['high', 'low', 'minimal'].includes(cfg.quality)) E('quality', `unknown value "${cfg.quality}"`, 'Use "high", "low" or "minimal", or leave it out (automatic).');
+  if (cfg.camera) unknownKeys(cfg.camera, CAM_KEYS, 'camera');
+  if (cfg.steps == null) { W('config', 'has no "steps", so nothing will animate', 'Add steps: [ { label: "...", parts: "...", from: "up" } ].'); return out; }
+  if (!Array.isArray(cfg.steps)) { E('steps', 'must be a list [ ... ]', 'Wrap the steps in square brackets.'); return out; }
+  const hidden = asList(cfg.hide);
+  cfg.steps.forEach((st, i) => {
+    const where = `steps[${i}]` + (st && st.label ? ` ("${String(st.label).slice(0, 40)}")` : '');
+    if (!st || typeof st !== 'object') { E(where, 'is not an object', 'Each step must look like { label: "...", parts: "...", from: "up" }.'); return; }
+    unknownKeys(st, STEP_KEYS, where);
+    const action = st.action || (st.parts ? 'insert' : st.camera ? 'camera' : 'wait');
+    if (!ACTIONS.includes(action)) { const c = closest(action, ACTIONS); E(where, `unknown action "${action}"`, (c ? `Did you mean "${c}"? ` : '') + `Actions: ${ACTIONS.join(', ')}.`); return; }
+    if (!st.label && action !== 'wait' && st.with == null) W(where, 'has no "label" (caption)', 'Add label: "Short instruction matching the written step".');
+    if (!['camera', 'wait'].includes(action)) checkParts(where, st.parts, true);
+    if (action === 'insert' && st.from != null && !dirSyntaxOK(st.from)) E(where, `can't read "from": ${JSON.stringify(st.from)}`, `Use a direction word (${DIR_WORDS.join(', ')}), an axis like "+y", or an offset [x, y, z].`);
+    if (['remove', 'move'].includes(action) && st.to != null && !dirSyntaxOK(st.to)) E(where, `can't read "to": ${JSON.stringify(st.to)}`, `Use a direction word (${DIR_WORDS.join(', ')}), an axis like "+y", or an offset [x, y, z].`);
+    if (action === 'move' && st.to == null && !st.path && !st.rotate) W(where, '"move" without "to", "path" or "rotate" does nothing', 'Add to: "up" (or an offset [x, y, z]).');
+    if (st.from != null && action !== 'insert') W(where, `"from" only applies to insert (this step is "${action}")`, action === 'remove' || action === 'move' ? 'Use "to" instead.' : 'Remove "from".');
+    if (st.ease != null && !EASE[st.ease]) { const c = closest(st.ease, Object.keys(EASE)); E(where, `unknown ease "${st.ease}"`, (c ? `Did you mean "${c}"? ` : '') + `Eases: ${Object.keys(EASE).join(', ')}.`); }
+    ['duration', 'stagger', 'delay', 'distance', 'hold', 'opacity'].forEach(k => { if (st[k] != null && (typeof st[k] !== 'number' || !isFinite(st[k]) || st[k] < 0)) E(where, `"${k}" must be a positive number (got ${JSON.stringify(st[k])})`, `Write ${k}: 1.2 (no quotes).`); });
+    if (st.duration === 0) E(where, '"duration" is 0', 'Use at least 0.2 seconds.');
+    if (st.rotate != null && !dirSyntaxOK(st.rotate)) E(where, '"rotate" must be [x°, y°, z°]', 'Example: rotate: [0, 90, 0].');
+    if (st.path != null && !(Array.isArray(st.path) && st.path.every(dirSyntaxOK))) E(where, '"path" must be a list of [x, y, z] offsets or direction words', 'Example: path: [[-60, 0, 0]].');
+    if (st.spin != null) { if (typeof st.spin !== 'object' || (st.spin.axis != null && !['x', 'y', 'z'].includes(st.spin.axis) && !Array.isArray(st.spin.axis))) E(where, '"spin" must look like { axis: "y", turns: 2 }', 'Axis is "x", "y" or "z"; turns can be negative.'); }
+    if (st.with != null && !['previous', 'prev'].includes(st.with)) E(where, `"with" must be "previous" (got ${JSON.stringify(st.with)})`, 'Use with: "previous" to run at the same time as the step before.');
+    if (st.with != null && i === 0) W(where, '"with" on the first step has nothing to join', 'Remove "with" from the first step.');
+    if (st.camera) { unknownKeys(st.camera, CAM_KEYS, where + '.camera'); if (st.camera.focus != null) checkParts(where + '.camera.focus', st.camera.focus, false);
+      if (st.camera.zoom != null && !(typeof st.camera.zoom === 'number' && st.camera.zoom > 0)) E(where, '"camera.zoom" must be a positive number', 'Example: camera: { focus: "fc", zoom: 1.8 }.'); }
+    if (action === 'insert' && names.length) asList(st.parts).forEach(p => { if (typeof p === 'string' && hidden.some(h => globToRe(h).test(p))) W(where, `"${p}" is inserted but also listed in "hide", so it will never be visible`, 'Remove it from "hide".'); });
+  });
+  return out;
+}
+
 window.Assembly3D = {
-  version: VERSION, mount, models: MODELS, builders: BUILDERS, actions: ACTIONS, easings: Object.keys(EASE),
+  version: VERSION, mount, validate, presets: Object.keys(PRESETS), models: MODELS, builders: BUILDERS, actions: ACTIONS, easings: Object.keys(EASE),
   registerModel: (name, src) => { MODELS[name] = src; },
   registerBuilder: (name, fn) => { BUILDERS[name] = fn; },
   destroyAll: () => { [...live].forEach(p => p.destroy()); }
