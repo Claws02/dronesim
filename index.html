@@ -385,7 +385,12 @@ const GUIDE = {
     // 3D assembly animations (diagram type "assembly3d"). Loaded only when a step needs them.
     // Files are relative to index.html. Offline model wrappers come from tools/glb-to-js.mjs or Assembly Studio.
     models: ["models/placeholder-quad.js"],
-    partGroups: { part: "Drone parts", tool: "Tools (included in the box)" }
+    partGroups: { part: "Drone parts", tool: "Tools (included in the box)" },
+    // Quality check (tools/qa.mjs, qa.bat). Only add entries for fits that are INTENDED in the real hardware:
+    //   allow:      [["partA", "partB"]]  pairs allowed to overlap (shaft in a hub, screw in a hole, press fit)
+    //   floatingOK: ["part"]              parts allowed to touch nothing (e.g. a dangling battery lead)
+    //   models:     { "modelName": { allow: [...], floatingOK: [...] } }   the same, for one model only
+    qa: { allow: [], floatingOK: [] }
   },
 
   // ───────────────────────── PARTS LIST ─────────────────────────

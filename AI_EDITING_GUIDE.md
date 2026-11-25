@@ -14,6 +14,25 @@
 8. Open `index.html?edit` and confirm the banner says **"No content problems found."**
 9. **Write the IT ticket** for QGroundControl (see *IT ticket* below). It must be submittable as-is after the reader fills in the blanks.
 10. **Every item in the box needs a photo.** The parts photos *are* the checklist: readers tap a photo to confirm they have that item.
+11. **Your work is checked by an automatic QA tool** (see *Quality check* below). A human runs it and pastes the report back to you. Avoid the mistakes listed there.
+
+## Quality check: what will make QA fail
+
+A human runs `qa.bat` on your files. It **fails** on any of these, so check before you hand files back:
+
+| Mistake | Avoid it by |
+|---|---|
+| Missing comma, unclosed quote or bracket, **curly quotes** (“ ” ‘ ’) | Use straight quotes `"` only; put a comma after every item except the last |
+| Unknown or misspelled field (`chekcs`, `form`, `colour`) | Use only the field names in this guide and ASSEMBLY_ANIMATION_GUIDE.md. Unknown fields fail QA, they are not ignored |
+| Two steps with the same `id`, or a step with no `checks` | Unique lowercase-with-dashes ids; at least one physical check per step |
+| `[[term]]` not defined in `GUIDE.glossary` | Add every term you bracket to the glossary |
+| A photo/model path that doesn't exist, or wrong capitals (`Motor.JPG` vs `motor.jpg`) | Copy file names exactly; leave `image: ""` if you have no photo (that's only a warning) |
+| An animation part name that isn't in the model | Only use names from the model's part list. **Ask the human to run `node tools/qa.mjs --list-parts <model>`** if you don't have it. Never guess part names |
+| Unknown animation action, direction, ease or material preset | Use only the values listed in ASSEMBLY_ANIMATION_GUIDE.md |
+| `{{f.field}}` in an IT ticket with no matching field | Every `{{f.x}}` needs `{ key: "x", label: "..." }` in `fields` |
+| **FIT-CLASH / FIT-FLOAT** on a real CAD model | You **cannot** fix CAD. Don't move or resize parts. Tell the human which parts need fixing in CAD. Only if the human confirms the fit is intended, add the pair to `GUIDE.settings.qa.allow` |
+
+**When you receive a QA report:** follow its *Instructions for the AI* section. Fix every ERROR exactly as its `Fix:` line says, change nothing else, and return complete files. Then fix the warnings you can, and list the ones you couldn't (e.g. VERIFY notes that need information you don't have).
 
 ## Structure
 
@@ -130,6 +149,8 @@ using the materials I've attached. Follow AI_EDITING_GUIDE.md exactly: edit only
 GUIDE object, never invent specs (add `verify` notes instead), keep all safety gates,
 keep body text simple and move extra info to `details`. Give every parts-list item a
 photo, write the QGroundControl IT ticket for our organisation, and if a 3D model is
-attached, follow ASSEMBLY_ANIMATION_GUIDE.md to add assembly animations. Return the
-full updated index.html, then a list of remaining verify items and any contradictions.
+attached, follow ASSEMBLY_ANIMATION_GUIDE.md to add assembly animations. Avoid every
+mistake in the "Quality check" table: your output will be checked by a QA tool.
+Return the full updated index.html, then a list of remaining verify items and any
+contradictions.
 ```

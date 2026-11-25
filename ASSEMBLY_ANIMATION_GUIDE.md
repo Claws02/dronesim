@@ -236,7 +236,7 @@ steps: [
 4. **Keep it short:** 2–5 steps per guide step, under ~10 seconds total.
 5. **Callouts for orientation:** arrows, "FRONT", motor numbers, CW/CCW.
 6. **Never invent geometry.** If the real model lacks a part, leave it out and note it in the step's `verify`.
-7. Test every animation in `assembly-studio.html`. Its warnings list unknown part names, actions and directions. In the guide, open `index.html?edit` to see the same warnings under each 3D view.
+7. Test every animation in `assembly-studio.html`, then run **`qa.bat`** (see QA.md). QA checks every part name, action, direction, preset and key against the real model, and fit-checks the model for clashes and floating parts.
 
 ## Placeholder model part names
 

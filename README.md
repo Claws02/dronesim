@@ -43,6 +43,10 @@ Send someone the folder (or just `index.html`) and they open it in a browser. Th
   - `examples/x500/`: the Holybro X500 from PX4's official Gazebo models (BSD-3).
   - Both are in Assembly Studio's examples list. See *Lessons from testing with real CAD* in the animation guide.
 
+## Quality check (QA)
+
+**Double-click `qa.bat`** (Mac: `qa.command`, Linux: `./qa.sh`) after any change. It checks the whole guide and every 3D model, then writes `QA_REPORT.md` with PASS/FAIL and the exact fix for each problem. Paste the report to the AI editing the guide. **Drag a `.glb` onto `qa.bat`** to check a new CAD export (clashes, floating parts, size, colours, names). It needs only Node.js. Step-by-step: **[QA.md](QA.md)**.
+
 ## Editing the content
 
 **All content lives in one `GUIDE` object near the top of `index.html`.** The engine below it never needs to change.
@@ -50,6 +54,7 @@ Send someone the folder (or just `index.html`) and they open it in a browser. Th
 - Humans: see the field reference in the comment block above `const GUIDE`.
 - AI assistants: give them **[AI_EDITING_GUIDE.md](AI_EDITING_GUIDE.md)** plus your materials (manuals, photos, wiring diagrams, parts list).
 - Open **`index.html?edit`** to see step ids, every ⚑ VERIFY note, and automatic content checks (duplicate ids, undefined glossary terms, unknown diagram types…).
+- Run **`qa.bat`** before handing the guide to builders: it must say PASS.
 
 ## Status of the template content
 
